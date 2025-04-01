@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maharashtra Tourism App Preview</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background-color: #111;
+            border-radius: 40px;
+            padding: 10px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .screen {
+            width: 100%;
+            height: 100%;
+            background-color: white;
+            border-radius: 30px;
+            overflow: hidden;
+        }
+        .screen-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .buttons-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+            max-width: 600px;
+        }
+        .screen-button {
+            padding: 10px 15px;
+            background-color: #FF6B00;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .screen-button:hover {
+            background-color: #FF8533;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .description {
+            color: #666;
+            margin-bottom: 30px;
+            text-align: center;
+            max-width: 600px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Maharashtra Tourism App</h1>
+    <p class="description">
+        This is a preview of the Maharashtra Tourism mobile app built with React Native and Expo.
+        Click the buttons below to view different screens of the application.
+    </p>
+    
+    <div class="app-container">
+        <div class="phone-frame">
+            <div class="screen" id="screen-display">
+                <!-- Screen content will be displayed here -->
+                <img src="attached_assets/WhatsApp Image 2025-04-02 at 00.56.25_06bf3593_1743544351260.jpg" alt="Welcome Screen" class="screen-image" id="screen-image">
+            </div>
+        </div>
+        
+        <div class="buttons-container">
+            <button class="screen-button" onclick="changeScreen('WhatsApp Image 2025-04-02 at 00.56.25_06bf3593_1743544351260.jpg', 'Welcome')">Welcome</button>
+            <button class="screen-button" onclick="changeScreen('WhatsApp Image 2025-03-24 at 18.57.00_14b119bd_1743544286548.jpg', 'Search')">Search</button>
+            <button class="screen-button" onclick="changeScreen('WhatsApp Image 2025-03-24 at 18.57.00_6a2a16b7_1743544277305.jpg', 'Transport Booking')">Transport Booking</button>
+            <button class="screen-button" onclick="changeScreen('WhatsApp Image 2025-03-24 at 18.57.00_9f4d900f_1743544308745.jpg', 'Dashboard')">Dashboard</button>
+            <button class="screen-button" onclick="changeScreen('WhatsApp Image 2025-03-24 at 18.57.00_d3a38eed_1743544300386.jpg', 'Hotel Booking')">Hotel Booking</button>
+            <button class="screen-button" onclick="changeScreen('WhatsApp Image 2025-04-02 at 00.56.25_7097a392_1743544325833.jpg', 'Login')">Login</button>
+            <button class="screen-button" onclick="changeScreen('WhatsApp Image 2025-04-02 at 00.56.25_c089f669_1743544331872.jpg', 'Register')">Register</button>
+        </div>
+    </div>
+    
+    <script>
+        function changeScreen(imageFile, screenName) {
+            document.getElementById('screen-image').src = `attached_assets/${imageFile}`;
+            document.getElementById('screen-image').alt = `${screenName} Screen`;
+        }
+    </script>
+</body>
+</html>

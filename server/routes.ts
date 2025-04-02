@@ -103,7 +103,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Guide routes
   app.get("/api/guides", async (req, res) => {
     try {
-      const guides = await storage.getAvailableGuides();
+      // Get all users
+      const allUsers = await storage.getAvailableGuides();
+      
+      // Filter actual guides with profiles
+      const guides = allUsers.filter(user => 
+        user.userType === 'guide' && 
+        user.guideProfile
+      );
       
       // Map to remove sensitive data
       const guidesWithoutSensitiveData = guides.map(guide => {
@@ -111,6 +118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return guideWithoutPassword;
       });
 
+      console.log(`Found ${guidesWithoutSensitiveData.length} guides`);
       return res.json(guidesWithoutSensitiveData);
     } catch (error) {
       console.error("Error fetching guides:", error);

@@ -20,14 +20,16 @@ export default function AvailableGuides() {
   const { data: guides = [], isLoading } = useQuery({
     queryKey: ['guides'],
     queryFn: async () => {
-      const response = await fetch('/api/guides');
-      if (!response.ok) throw new Error('Failed to fetch guides');
+      const response = await fetch('/api/guides/available');
+      if (!response.ok) {
+        throw new Error('Failed to fetch guides');
+      }
       return response.json();
     }
   });
 
   const sendRequest = useMutation({
-    mutationFn: async (guideId: number) => {
+    mutationFn: async (guideId) => {
       const response = await fetch('/api/connections', {
         method: 'POST',
         headers: {
@@ -38,8 +40,6 @@ export default function AvailableGuides() {
           toUserId: guideId,
           status: 'pending',
           message: message,
-          tripDetails: 'Looking for guidance in Maharashtra',
-          budget: 'Flexible'
         }),
       });
 
@@ -65,7 +65,7 @@ export default function AvailableGuides() {
     },
   });
 
-  const handleRequestGuide = (guide: any) => {
+  const handleRequestGuide = (guide) => {
     setSelectedGuide(guide);
     setIsDialogOpen(true);
   };
@@ -84,10 +84,6 @@ export default function AvailableGuides() {
 
   if (isLoading) {
     return <div className="text-center p-4">Loading guides...</div>;
-  }
-
-  if (!guides?.length) {
-    return <div className="text-center p-4">No guides available at the moment.</div>;
   }
 
   return (

@@ -13,6 +13,12 @@ import Connections from "@/pages/connections";
 import Profile from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 
+// Guide pages
+import GuideDashboard from "@/pages/guide-dashboard";
+import GuideRequests from "@/pages/guide-requests";
+import GuideItineraries from "@/pages/guide-itineraries";
+import GuideConnections from "@/pages/guide-connections";
+
 import { useAuth } from "@/lib/auth";
 
 function App() {
@@ -29,6 +35,7 @@ function App() {
         {/* Protected routes - only accessible when logged in */}
         {user ? (
           <>
+            {/* Tourist routes */}
             <Route path="/dashboard" component={Dashboard} />
             <Route path="/search" component={SearchPage} />
             <Route path="/transport-booking" component={TransportBooking} />
@@ -36,6 +43,12 @@ function App() {
             <Route path="/trip-planner" component={TripPlanner} />
             <Route path="/connections" component={Connections} />
             <Route path="/profile" component={Profile} />
+            
+            {/* Guide routes */}
+            <Route path="/guide-dashboard" component={GuideDashboard} />
+            <Route path="/guide-requests" component={GuideRequests} />
+            <Route path="/guide-itineraries" component={GuideItineraries} />
+            <Route path="/guide-connections" component={GuideConnections} />
           </>
         ) : (
           // Redirect to login if trying to access protected routes while not logged in

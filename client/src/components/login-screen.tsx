@@ -34,12 +34,19 @@ const LoginScreen: React.FC = () => {
   const onSubmit = async (data: LoginFormValues) => {
     try {
       setIsLoading(true);
-      await login(data.username, data.password);
+      const user = await login(data.username, data.password);
+      
       toast({
         title: "Login successful",
         description: "Welcome back to Maharashtra Wanderer!",
       });
-      setLocation("/dashboard");
+      
+      // Redirect based on user role
+      if (user.isGuide) {
+        setLocation("/guide-dashboard");
+      } else {
+        setLocation("/dashboard");
+      }
     } catch (error) {
       toast({
         title: "Login failed",

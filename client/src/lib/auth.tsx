@@ -1,17 +1,22 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { apiRequest } from "./queryClient";
-import { User } from "../../shared/schema";
+import { User as BaseUser } from "../../shared/schema";
+
+// Extend the User type to include the isGuide property
+interface User extends BaseUser {
+  isGuide: boolean;
+}
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<User>;
   logout: () => void;
   isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  login: async () => {},
+  login: async () => { throw new Error("Not implemented"); },
   logout: () => {},
   isLoading: false,
 });
@@ -29,7 +34,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        
+        // Make sure the isGuide property is set for existing users
+        if (parsedUser.isGuide === undefined) {
+          parsedUser.isGuide = parsedUser.userType === 'guide';
+          localStorage.setItem("user", JSON.stringify(parsedUser));
+        }
+        
+        setUser(parsedUser);
       } catch (error) {
         console.error("Failed to parse stored user data:", error);
         localStorage.removeItem("user");
@@ -38,7 +51,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setIsLoading(false);
   }, []);
 
-  const login = async (username: string, password: string) => {
+  const login = async (username: string, password: string): Promise<User> => {
     try {
       setIsLoading(true);
       const response = await apiRequest("POST", "/api/auth/login", { username, password });
@@ -48,9 +61,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         throw new Error(errorData.message || "Login failed");
       }
       
-      const userData = await response.json();
+      const baseUserData: BaseUser = await response.json();
+      
+      // Add the isGuide property based on userType
+      const userData: User = {
+        ...baseUserData,
+        isGuide: baseUserData.userType === 'guide'
+      };
+      
       setUser(userData);
       localStorage.setItem("user", JSON.stringify(userData));
+      return userData;
     } catch (error) {
       console.error("Login error:", error);
       throw error;

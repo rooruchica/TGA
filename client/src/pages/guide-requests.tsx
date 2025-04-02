@@ -15,7 +15,12 @@ const GuideRequests: React.FC = () => {
   
   // Query for connection requests
   const { data: connections, isLoading } = useQuery({
-    queryKey: ['/api/guide/connections'],
+    queryKey: ['/api/connections'],
+    queryFn: async () => {
+      const response = await fetch(`/api/connections?userId=${user?.id}`);
+      if (!response.ok) throw new Error('Failed to fetch connections');
+      return response.json();
+    },
   });
   
   // Filter connections based on active tab

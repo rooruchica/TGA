@@ -473,7 +473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { fromUserId, toUserId, status, message, tripDetails, budget } = req.body;
 
-      if (!fromUserId || !toUserId || !status || !message || !tripDetails) {
+      if (!fromUserId || !toUserId || !status || !message) {
         return res.status(400).json({ message: "Missing required fields" });
       }
 
@@ -482,16 +482,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Cannot connect with yourself" });
       }
 
+      // Verify the guide exists
+      const guide = await storage.getUser(toUserId);
+      if (!guide || guide.userType !== 'guide') {
+        return res.status(400).json({ message: "Invalid guide user" });
+      }
+
       const connection = await storage.createConnection({
         fromUserId,
         toUserId,
         status,
         message,
-        tripDetails,
-        budget
+        tripDetails: tripDetails || 'No specific details provided',
+        budget: budget || 'Not specified'
       });
 
-      return res.status(201).json(connection);
+      // Get user details for response
+      const fromUser = await storage.getUser(fromUserId);
+      const toUser = await storage.getUser(toUserId);
+
+      const { password: _, ...connectionData } = connection;
+      const { password: __, ...fromUserData } = fromUser;
+      const { password: ___, ...toUserData } = toUser;
+
+      return res.status(201).json({
+        ...connectionData,
+        fromUser: fromUserData,
+        toUser: toUserData
+      });
     } catch (error) {
       console.error("Error creating connection:", error);
       return res.status(500).json({ message: "Server error" });

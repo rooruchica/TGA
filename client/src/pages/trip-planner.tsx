@@ -60,7 +60,12 @@ const TripPlanner: React.FC = () => {
   
   const { data: itineraries, isLoading } = useQuery({
     queryKey: ['/api/users', user?.id, 'itineraries'],
-    enabled: !!user,
+    queryFn: async () => {
+      const response = await fetch(`/api/users/${user?.id}/itineraries`);
+      if (!response.ok) throw new Error('Failed to fetch trips');
+      return response.json();
+    },
+    enabled: !!user?.id,
   });
   
   const form = useForm<TripFormValues>({

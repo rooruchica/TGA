@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { seedDatabase } from "./data/seed-data";
+import { seedMissingData } from "./data/seed-missing-data";
 
 const app = express();
 app.use(express.json());
@@ -37,6 +39,18 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize database and seed data
+  console.log("Initializing database...");
+  try {
+    await seedDatabase();
+    // Additionally seed any missing attractions and guides
+    await seedMissingData();
+    console.log("Database initialization complete");
+    console.log("Database ready");
+  } catch (error) {
+    console.error("Database initialization error:", error);
+  }
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

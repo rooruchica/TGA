@@ -143,7 +143,7 @@ export class PostgresStorage implements IStorage {
 
   async getConnections(userId: number): Promise<Connection[]> {
     return await db.select().from(connections).where(
-      or(eq(connections.touristId, userId), eq(connections.guideId, userId))
+      or(eq(connections.fromUserId, userId), eq(connections.toUserId, userId))
     );
   }
 

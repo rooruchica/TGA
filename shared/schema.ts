@@ -106,9 +106,12 @@ export const insertBookingSchema = createInsertSchema(bookings).omit({
 // Connections schema
 export const connections = pgTable("connections", {
   id: serial("id").primaryKey(),
-  touristId: integer("tourist_id").notNull().references(() => users.id),
-  guideId: integer("guide_id").notNull().references(() => users.id),
+  fromUserId: integer("from_user_id").notNull().references(() => users.id),
+  toUserId: integer("to_user_id").notNull().references(() => users.id),
   status: text("status").notNull(), // 'pending', 'accepted', 'rejected'
+  message: text("message").notNull(),
+  tripDetails: text("trip_details").notNull(),
+  budget: text("budget"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

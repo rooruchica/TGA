@@ -216,13 +216,18 @@ export class MemStorage implements IStorage {
   
   async getConnections(userId: number): Promise<Connection[]> {
     return Array.from(this.connections.values()).filter(
-      (connection) => connection.touristId === userId || connection.guideId === userId,
+      (connection) => connection.fromUserId === userId || connection.toUserId === userId,
     );
   }
   
   async createConnection(connection: InsertConnection): Promise<Connection> {
     const id = this.currentConnectionId++;
-    const newConnection: Connection = { ...connection, id, createdAt: new Date() };
+    const newConnection: Connection = { 
+      ...connection, 
+      id, 
+      budget: connection.budget || null,
+      createdAt: new Date() 
+    };
     this.connections.set(id, newConnection);
     return newConnection;
   }
@@ -498,17 +503,23 @@ export class MemStorage implements IStorage {
     // Create sample connections
     const connection1: Connection = {
       id: this.currentConnectionId++,
-      touristId: user1.id,
-      guideId: user2.id,
+      fromUserId: user1.id,
+      toUserId: user2.id,
       status: 'accepted',
+      message: "Hello, I'd like to book a tour of Mumbai with you.",
+      tripDetails: "I'll be in Mumbai for 3 days from April 5-8th.",
+      budget: "5000 INR",
       createdAt: new Date()
     };
     
     const connection2: Connection = {
       id: this.currentConnectionId++,
-      touristId: user1.id,
-      guideId: user3.id,
+      fromUserId: user1.id,
+      toUserId: user3.id,
       status: 'accepted',
+      message: "Looking for a good guide in Pune area.",
+      tripDetails: "Planning to visit Pune next month for 5 days.",
+      budget: "3000 INR",
       createdAt: new Date()
     };
     

@@ -312,23 +312,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get full user details for each connection
       const connectionsWithDetails = await Promise.all(
         connections.map(async (connection) => {
-          const tourist = await storage.getUser(connection.touristId);
-          const guide = await storage.getUser(connection.guideId);
-          const guideProfile = guide ? await storage.getGuideProfile(guide.id) : undefined;
+          const fromUser = await storage.getUser(connection.fromUserId);
+          const toUser = await storage.getUser(connection.toUserId);
+          
+          // Determine which user is a guide (if any)
+          const guideUser = fromUser?.userType === 'guide' ? fromUser : 
+                          toUser?.userType === 'guide' ? toUser : null;
+          
+          const guideProfile = guideUser ? await storage.getGuideProfile(guideUser.id) : undefined;
           
           // Remove passwords
-          const touristWithoutPassword = tourist ? 
-            { ...tourist, password: undefined } : 
+          const fromUserWithoutPassword = fromUser ? 
+            { ...fromUser, password: undefined } : 
             undefined;
             
-          const guideWithoutPassword = guide ? 
-            { ...guide, password: undefined } : 
+          const toUserWithoutPassword = toUser ? 
+            { ...toUser, password: undefined } : 
             undefined;
           
           return {
             ...connection,
-            tourist: touristWithoutPassword,
-            guide: guideWithoutPassword,
+            fromUser: fromUserWithoutPassword,
+            toUser: toUserWithoutPassword,
             guideProfile
           };
         })
@@ -340,18 +345,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/connections", async (req, res) => {
-    try {
-      const connectionData = insertConnectionSchema.parse(req.body);
-      const connection = await storage.createConnection(connectionData);
-      return res.status(201).json(connection);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      return res.status(500).json({ message: "Server error" });
-    }
-  });
+  // This route is now handled by the more detailed implementation below
   
   app.patch("/api/connections/:id/status", async (req, res) => {
     try {
@@ -454,8 +448,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status,
         message,
         tripDetails,
-        budget,
-        createdAt: new Date()
+        budget
       });
       
       return res.status(201).json(connection);
@@ -517,6 +510,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(connection);
     } catch (error) {
       console.error("Error updating connection:", error);
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+  
+  // Guide API endpoints
+  app.get("/api/guides", async (req, res) => {
+    try {
+      const guides = await storage.getAvailableGuides();
+      
+      // Remove passwords from the response
+      const guidesWithoutPasswords = guides.map(guide => {
+        const { password, ...guideWithoutPassword } = guide;
+        return guideWithoutPassword;
+      });
+      
+      return res.json(guidesWithoutPasswords);
+    } catch (error) {
+      console.error("Error fetching guides:", error);
       return res.status(500).json({ message: "Server error" });
     }
   });

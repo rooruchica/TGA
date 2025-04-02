@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/utils";
 
-export function AvailableGuides() {
+export default function AvailableGuides() {
   const { toast } = useToast();
   const { user } = useAuth();
 

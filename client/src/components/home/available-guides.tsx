@@ -13,14 +13,14 @@ export default function AvailableGuides() {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [selectedGuide, setSelectedGuide] = useState(null);
+  const [selectedGuide, setSelectedGuide] = useState<any>(null);
   const [message, setMessage] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const { data: guides = [], isLoading } = useQuery({
     queryKey: ['guides'],
     queryFn: async () => {
-      const response = await fetch('/api/guides/available');
+      const response = await fetch('/api/guides');
       if (!response.ok) {
         throw new Error('Failed to fetch guides');
       }
@@ -29,7 +29,7 @@ export default function AvailableGuides() {
   });
 
   const sendRequest = useMutation({
-    mutationFn: async (guideId) => {
+    mutationFn: async (guideId: number) => {
       const response = await fetch('/api/connections', {
         method: 'POST',
         headers: {
@@ -40,6 +40,8 @@ export default function AvailableGuides() {
           toUserId: guideId,
           status: 'pending',
           message: message,
+          tripDetails: 'Initial tour request',
+          budget: '0'
         }),
       });
 
@@ -65,7 +67,7 @@ export default function AvailableGuides() {
     },
   });
 
-  const handleRequestGuide = (guide) => {
+  const handleRequestGuide = (guide: any) => {
     setSelectedGuide(guide);
     setIsDialogOpen(true);
   };
@@ -79,7 +81,9 @@ export default function AvailableGuides() {
       });
       return;
     }
-    sendRequest.mutate(selectedGuide.id);
+    if (selectedGuide) {
+      sendRequest.mutate(selectedGuide.id);
+    }
   };
 
   if (isLoading) {
@@ -90,7 +94,7 @@ export default function AvailableGuides() {
     <div className="space-y-4">
       <h2 className="text-2xl font-bold px-4">Available Guides</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-        {guides.map((guide) => (
+        {guides.map((guide: any) => (
           <Card key={guide.id} className="overflow-hidden">
             <CardContent className="p-4">
               <div className="flex items-center gap-4">

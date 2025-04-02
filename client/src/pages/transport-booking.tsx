@@ -1,6 +1,7 @@
 import { useLocation } from "wouter";
 import BottomNavigation from "@/components/bottom-navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import BusForm from "@/components/transport/bus-form";
 
 const TransportBooking: React.FC = () => {

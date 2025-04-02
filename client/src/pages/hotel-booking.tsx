@@ -14,7 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import BottomNavigation from "@/components/bottom-navigation";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/lib/AuthContext";
+// App now holds authentication state instead of AuthContext
 
 const hotelBookingSchema = z.object({
   location: z.string().min(1, "Location is required"),
@@ -38,7 +38,8 @@ type HotelBookingFormValues = z.infer<typeof hotelBookingSchema>;
 const HotelBooking: React.FC = () => {
   const [_, setLocation] = useLocation();
   const { toast } = useToast();
-  const { user } = useAuth();
+  // Get user from window.auth (set in App.tsx)
+  const user = (window as any).auth?.user;
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<HotelBookingFormValues>({

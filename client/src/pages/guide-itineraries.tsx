@@ -32,6 +32,18 @@ const GuideItineraries: React.FC = () => {
   // Handle creating a new itinerary
   const handleCreateItinerary = async () => {
     try {
+      // Get current user from window.auth (set in App.tsx)
+      const user = (window as any).auth?.user;
+      
+      if (!user) {
+        toast({
+          title: "Authentication required",
+          description: "Please login to create an itinerary",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       if (!newItinerary.title || !newItinerary.startDate) {
         toast({
           title: "Incomplete information",
@@ -41,7 +53,19 @@ const GuideItineraries: React.FC = () => {
         return;
       }
       
-      await apiRequest('POST', '/api/itineraries', newItinerary);
+      // Include userId in the itinerary data
+      const itineraryData = {
+        ...newItinerary,
+        userId: user.id
+      };
+      
+      // Make the API request with complete data
+      const response = await apiRequest('POST', '/api/itineraries', itineraryData);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create itinerary");
+      }
       
       // Reset form and close dialog
       setNewItinerary({
@@ -60,9 +84,10 @@ const GuideItineraries: React.FC = () => {
       // Refresh itineraries data
       queryClient.invalidateQueries({ queryKey: ['/api/guide/itineraries'] });
     } catch (error) {
+      console.error("Error creating itinerary:", error);
       toast({
         title: "Failed to create itinerary",
-        description: "There was an error creating your itinerary. Please try again.",
+        description: error instanceof Error ? error.message : "There was an error creating your itinerary. Please try again.",
         variant: "destructive",
       });
     }

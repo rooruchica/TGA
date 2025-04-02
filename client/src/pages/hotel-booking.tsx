@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -38,9 +38,22 @@ type HotelBookingFormValues = z.infer<typeof hotelBookingSchema>;
 const HotelBooking: React.FC = () => {
   const [_, setLocation] = useLocation();
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   // Get user from window.auth (set in App.tsx)
   const user = (window as any).auth?.user;
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please login to book a hotel",
+        variant: "destructive",
+      });
+      setLocation('/login');
+    }
+  }, [user, setLocation, toast]);
   
   const form = useForm<HotelBookingFormValues>({
     resolver: zodResolver(hotelBookingSchema),

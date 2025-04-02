@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -15,7 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import BottomNavigation from "@/components/bottom-navigation";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/lib/AuthContext";
+// Global auth state is used instead of AuthContext
 
 const tripSchema = z.object({
   title: z.string().min(2, "Title must be at least 2 characters"),
@@ -36,9 +36,23 @@ type TripFormValues = z.infer<typeof tripSchema>;
 const TripPlanner: React.FC = () => {
   const [_, setLocation] = useLocation();
   const { toast } = useToast();
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  
+  // Get user from window.auth (set in App.tsx)
+  const user = (window as any).auth?.user;
+  
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please login to access trip planner",
+        variant: "destructive",
+      });
+      setLocation('/login');
+    }
+  }, [user, setLocation, toast]);
   
   const { data: itineraries, isLoading } = useQuery({
     queryKey: ['/api/users', user?.id, 'itineraries'],

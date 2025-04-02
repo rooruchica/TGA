@@ -100,8 +100,18 @@ function App() {
     setLocation("/");
   };
   
-  // Export authentication functions to window
-  (window as any).auth = { login, logout, setUser };
+  // Export authentication functions and state to window
+  // This makes auth state accessible globally for all components
+  useEffect(() => {
+    console.log("Setting global auth state with user:", user);
+    (window as any).auth = { 
+      user, 
+      login, 
+      logout, 
+      setUser,
+      isAuthenticated: !!user
+    };
+  }, [user]);
   
   // Redirect users based on their role after login
   useEffect(() => {

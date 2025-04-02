@@ -49,14 +49,13 @@ const BusForm: React.FC = () => {
   });
   
   const onSubmit = async (data: BusBookingFormValues) => {
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please login to book a bus ticket",
-        variant: "destructive",
-      });
-      return;
-    }
+    setIsSubmitting(true);
+    
+    try {
+      if (!user) {
+        setLocation('/login');
+        return;
+      }
     
     try {
       setIsSubmitting(true);

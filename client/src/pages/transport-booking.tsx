@@ -100,7 +100,13 @@ const TransportBooking: React.FC = () => {
               <path d="M15 3v10" />
             </svg>
             <p className="text-gray-600">Train booking coming soon</p>
-            <p className="text-gray-500 text-sm">Try booking a bus instead</p>
+            <Button
+              onClick={() => setLocation('/login')}
+              className="mt-4"
+              variant="outline"
+            >
+              Login to Continue
+            </Button>
           </div>
         </TabsContent>
         

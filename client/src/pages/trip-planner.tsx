@@ -24,6 +24,10 @@ const tripSchema = z.object({
     required_error: "Start date is required",
   }),
   endDate: z.date().optional(),
+  fromCity: z.string().min(2, "From city is required"),
+  toCity: z.string().min(2, "To city is required"),
+  numberOfPlaces: z.number().min(1).optional(),
+  budget: z.string().optional(),
 }).refine(data => {
   return !data.endDate || data.endDate > data.startDate;
 }, {
@@ -147,6 +151,36 @@ const TripPlanner: React.FC = () => {
                 )}
               />
               
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="fromCity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <Label>From City</Label>
+                      <FormControl>
+                        <Input placeholder="e.g. Mumbai" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="toCity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <Label>To City</Label>
+                      <FormControl>
+                        <Input placeholder="e.g. Pune" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <FormField
                 control={form.control}
                 name="description"
@@ -159,6 +193,20 @@ const TripPlanner: React.FC = () => {
                         className="resize-none" 
                         {...field} 
                       />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="budget"
+                render={({ field }) => (
+                  <FormItem>
+                    <Label>Budget (Optional)</Label>
+                    <FormControl>
+                      <Input placeholder="e.g. ₹15000" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

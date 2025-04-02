@@ -426,4 +426,13 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Import PostgreSQL storage implementation
+import { PostgresStorage, initializeDatabase } from './database';
+
+// Initialize the database and export the PostgreSQL storage instead of MemStorage
+export const storage = new PostgresStorage();
+
+// Initialize the database tables and seed data if needed
+initializeDatabase()
+  .then(() => console.log('Database ready'))
+  .catch(err => console.error('Database initialization error:', err));

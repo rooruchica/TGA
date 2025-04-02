@@ -608,27 +608,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 }
 import { Mistral } from '@mistralai/mistralai';
 
-const mistral = new Mistral('jRuxrXPaXaoCLMEarL3mJQH9GaGDjuZJ');
+const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY || 'jRuxrXPaXaoCLMEarL3mJQH9GaGDjuZJ' });
 
-// Add this to your existing routes
-app.post('/api/chat', async (req, res) => {
-  try {
-    const { message } = req.body;
-    
-    const chatResponse = await mistral.chat.completions.create({
-      model: 'mistral-tiny',
-      messages: [{
-        role: 'system',
-        content: 'You are a knowledgeable Maharashtra tour guide assistant. Help tourists with information about places, culture, travel tips, and local experiences in Maharashtra.'
-      }, {
-        role: 'user',
-        content: message
-      }]
-    });
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Add chat endpoint
+  app.post('/api/chat', async (req, res) => {
+    try {
+      const { message } = req.body;
+      
+      const chatResponse = await mistral.chat.complete({
+        model: 'mistral-large-latest',
+        messages: [{
+          role: 'system',
+          content: 'You are a knowledgeable Maharashtra tour guide assistant. Help tourists with information about places, culture, travel tips, and local experiences in Maharashtra.'
+        }, {
+          role: 'user',
+          content: message
+        }]
+      });
 
-    res.json({ response: chatResponse.choices[0].message.content });
-  } catch (error) {
-    console.error('Chat error:', error);
-    res.status(500).json({ error: 'Failed to get response from assistant' });
-  }
-});
+      res.json({ response: chatResponse.choices[0].message.content });
+    } catch (error) {
+      console.error('Chat error:', error);
+      res.status(500).json({ error: 'Failed to get response from assistant' });
+    }
+  });

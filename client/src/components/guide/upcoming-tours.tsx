@@ -9,9 +9,9 @@ const UpcomingTours: React.FC = () => {
   
   const { user } = useAuth();
   const { data: upcomingTours, isLoading } = useQuery({
-    queryKey: ['/api/trips', user?.id],
+    queryKey: ['/api/users', user?.id, 'itineraries'],
     queryFn: async () => {
-      const response = await fetch(`/api/trips/${user?.id}`);
+      const response = await fetch(`/api/users/${user?.id}/itineraries`);
       if (!response.ok) throw new Error('Failed to fetch trips');
       return response.json();
     },
@@ -24,7 +24,7 @@ const UpcomingTours: React.FC = () => {
   return (
     <div>
       <div className="flex justify-between items-center mb-2">
-        <h3 className="font-medium">Upcoming Tours</h3>
+        <h3 className="font-medium">My Trips</h3>
         <Button 
           variant="ghost" 
           className="text-xs h-8 text-[#DC143C]"

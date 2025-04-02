@@ -100,6 +100,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Trip routes
+  app.get("/api/trips/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const trips = await storage.getItineraries(userId);
+      return res.json(trips);
+    } catch (error) {
+      console.error("Error fetching trips:", error);
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/trips", async (req, res) => {
+    try {
+      const tripData = {
+        userId: req.body.userId,
+        title: req.body.title,
+        description: req.body.description,
+        startDate: req.body.startDate,
+        endDate: req.body.endDate
+      };
+      const trip = await storage.createItinerary(tripData);
+      return res.status(201).json(trip);
+    } catch (error) {
+      console.error("Error creating trip:", error);
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // Guide routes
   app.get("/api/guides", async (req, res) => {
     try {

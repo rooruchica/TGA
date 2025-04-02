@@ -7,9 +7,15 @@ import { Badge } from "@/components/ui/badge";
 const UpcomingTours: React.FC = () => {
   const [_, setLocation] = useLocation();
   
-  // Query for upcoming tours/itineraries
+  const { user } = useAuth();
   const { data: upcomingTours, isLoading } = useQuery({
-    queryKey: ['/api/guide/itineraries', { upcoming: true }],
+    queryKey: ['/api/trips', user?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/trips/${user?.id}`);
+      if (!response.ok) throw new Error('Failed to fetch trips');
+      return response.json();
+    },
+    enabled: !!user?.id
   });
   
   // Only show up to 2 tours in the preview

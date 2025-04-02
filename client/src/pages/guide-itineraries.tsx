@@ -24,9 +24,13 @@ const GuideItineraries: React.FC = () => {
     endDate: "",
   });
   
+  const user = (window as any).auth?.user;
+  
   // Query for guide's itineraries
   const { data: itineraries, isLoading } = useQuery({
-    queryKey: ['/api/guide/itineraries'],
+    queryKey: ['itineraries', user?.id],
+    queryFn: () => api(`/users/${user?.id}/itineraries`),
+    enabled: !!user?.id
   });
   
   // Handle creating a new itinerary

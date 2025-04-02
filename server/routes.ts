@@ -103,19 +103,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Guide routes
   app.get("/api/guides", async (req, res) => {
     try {
-      const guides = await storage.getAvailableGuides();
+      // Get all users directly from the database
+      const allUsers = await db.select().from(users);
+      
+      // Filter guide users and remove passwords
+      const guides = allUsers
+        .filter(user => user.userType === 'guide')
+        .map(guide => {
+          const { password, ...guideWithoutPassword } = guide;
+          return guideWithoutPassword;
+        });
 
-      // Sort guides by experience level
-      guides.sort((a, b) => (b.guideProfile?.experience || 0) - (a.guideProfile?.experience || 0));
-
-      // Map to remove passwords
-      const guidesWithoutPasswords = guides.map(guide => {
-        const { password, ...userWithoutPassword } = guide;
-        return { ...userWithoutPassword, guideProfile: guide.guideProfile };
-      });
-
-      return res.json(guidesWithoutPasswords);
+      return res.json(guides);
     } catch (error) {
+      console.error("Error fetching guides:", error);
       return res.status(500).json({ message: "Server error" });
     }
   });

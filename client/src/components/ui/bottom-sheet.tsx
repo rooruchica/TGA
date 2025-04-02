@@ -31,6 +31,10 @@ const BottomSheet = React.forwardRef<
     },
     ref
   ) => {
+    const sheetRef = React.useRef<HTMLDivElement>(null);
+    const contentRef = React.useRef<HTMLDivElement>(null);
+    const isDragging = React.useRef(false);
+    const startY = React.useRef(0);
     const [currentSnapPoint, setCurrentSnapPoint] = React.useState(defaultSnapPoint);
     const sheetRef = React.useRef<HTMLDivElement>(null);
     const [sheetHeight, setSheetHeight] = React.useState(0);
@@ -113,18 +117,46 @@ const BottomSheet = React.forwardRef<
               drag="y"
               dragConstraints={{ top: 0, bottom: 0 }}
               dragElastic={0.1}
-              onDragEnd={handleDragEnd}
+              onDragStart={(e) => {
+                isDragging.current = true;
+                startY.current = e.clientY;
+              }}
+              onDrag={(e, info) => {
+                if (contentRef.current) {
+                  contentRef.current.style.overflow = 'hidden';
+                }
+              }}
+              onDragEnd={(e, info) => {
+                isDragging.current = false;
+                if (contentRef.current) {
+                  contentRef.current.style.overflow = 'auto';
+                }
+                handleDragEnd(e, info);
+              }}
               {...props}
             >
               <div
                 className={cn(
-                  "w-full flex justify-center p-2",
+                  "sticky top-0 z-10 w-full flex justify-center p-2 bg-background",
                   handleClassName
                 )}
               >
                 <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
               </div>
-              {children}
+              <div 
+                ref={contentRef}
+                className="max-h-[calc(100vh-120px)] overflow-y-auto"
+                onTouchStart={(e) => {
+                  if (contentRef.current) {
+                    const isAtTop = contentRef.current.scrollTop === 0;
+                    if (isAtTop) {
+                      startY.current = e.touches[0].clientY;
+                    }
+                  }
+                }}
+              >
+                {children}
+              </div>
             </motion.div>
           </>
         )}

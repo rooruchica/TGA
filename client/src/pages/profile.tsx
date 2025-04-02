@@ -4,7 +4,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import BottomNavigation from "@/components/bottom-navigation";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 const Profile: React.FC = () => {

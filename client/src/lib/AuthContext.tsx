@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
-// Define a base user type if we can't import from schema
+// Define a base user type
 type BaseUser = {
   id: number;
   username: string;
@@ -11,11 +11,12 @@ type BaseUser = {
   createdAt: Date;
 };
 
-// Extend the User type to include the isGuide property
-interface User extends BaseUser {
+// User type with isGuide property
+export interface User extends BaseUser {
   isGuide: boolean;
 }
 
+// Auth context type
 interface AuthContextType {
   user: User | null;
   login: (username: string, password: string) => Promise<User>;
@@ -23,14 +24,20 @@ interface AuthContextType {
   isLoading: boolean;
 }
 
-// Create auth context with default values
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Create the auth context with default values
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  login: async () => { throw new Error("AuthProvider not initialized"); },
+  logout: () => {},
+  isLoading: false
+});
 
+// Auth provider props
 interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Create the auth provider component
+// Auth provider component
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,11 +65,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   // Login function
-  async function login(username: string, password: string): Promise<User> {
+  const login = async (username: string, password: string): Promise<User> => {
     try {
       setIsLoading(true);
       
-      // Use fetch directly since we need to check the response status and read the body
+      // Use fetch directly
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -93,34 +100,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setIsLoading(false);
     }
-  }
+  };
 
   // Logout function
-  function logout() {
+  const logout = () => {
     setUser(null);
     localStorage.removeItem("user");
-  }
-
-  // Create the context value
-  const value = {
-    user,
-    login,
-    logout,
-    isLoading
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-// Create the useAuth hook
+// Hook to use the auth context
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
   return context;
 }

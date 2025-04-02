@@ -7,7 +7,7 @@ import MapView from "@/components/map-view";
 import GuideStats from "@/components/guide/guide-stats";
 import RequestsPreview from "@/components/guide/requests-preview";
 import UpcomingTours from "@/components/guide/upcoming-tours";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/AuthContext";
 
 const GuideDashboard: React.FC = () => {
   const [_, setLocation] = useLocation();

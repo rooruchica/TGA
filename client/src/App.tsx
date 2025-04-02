@@ -1,5 +1,4 @@
 import { Switch, Route, useLocation } from "wouter";
-import { Toaster } from "@/components/ui/toaster";
 import { useEffect } from "react";
 
 import WelcomeScreen from "@/components/welcome-screen";
@@ -20,7 +19,7 @@ import GuideRequests from "@/pages/guide-requests";
 import GuideItineraries from "@/pages/guide-itineraries";
 import GuideConnections from "@/pages/guide-connections";
 
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/AuthContext";
 
 function App() {
   const { user, isLoading } = useAuth();
@@ -54,7 +53,6 @@ function App() {
 
   return (
     <div id="app-container" className="h-screen flex flex-col">
-      <Toaster />
       <Switch>
         {/* Public routes */}
         <Route path="/" component={WelcomeScreen} />

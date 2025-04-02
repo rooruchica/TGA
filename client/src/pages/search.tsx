@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BottomNavigation from "@/components/bottom-navigation";
@@ -8,6 +8,25 @@ import MapView from "@/components/map-view";
 import POICategories from "@/components/search/poi-categories";
 import { PlaceCategory, GeoapifyPlace, getPlacesNearby } from "@/lib/geoapify";
 import { getCurrentPosition } from "@/lib/geolocation";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+
+// Connection form schema
+const connectionFormSchema = z.object({
+  message: z.string().min(10, "Please write a brief message to the guide"),
+  tripDetails: z.string().min(5, "Please provide some details about your trip"),
+  budget: z.string().optional(),
+});
+
+type ConnectionFormValues = z.infer<typeof connectionFormSchema>;
 
 const SearchPage: React.FC = () => {
   const [_, setLocation] = useLocation();
@@ -19,6 +38,64 @@ const SearchPage: React.FC = () => {
   const [placesNearby, setPlacesNearby] = useState<GeoapifyPlace[]>([]);
   const [userCoords, setUserCoords] = useState<{latitude: string, longitude: string} | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const { toast } = useToast();
+  
+  // Connection form
+  const connectionForm = useForm<ConnectionFormValues>({
+    resolver: zodResolver(connectionFormSchema),
+    defaultValues: {
+      message: "",
+      tripDetails: "",
+      budget: "",
+    },
+  });
+  
+  // Connection mutation
+  const connectionMutation = useMutation({
+    mutationFn: async ({ guideId, data }: { guideId: number; data: ConnectionFormValues }) => {
+      const auth = (window as any).auth;
+      if (!auth || !auth.user || !auth.user.id) {
+        throw new Error("You must be logged in to connect with a guide");
+      }
+      
+      const payload = {
+        fromUserId: auth.user.id,
+        toUserId: guideId,
+        status: "pending",
+        message: data.message,
+        tripDetails: data.tripDetails,
+        budget: data.budget || null,
+      };
+      
+      const response = await apiRequest("POST", "/api/connections", payload);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Request sent!",
+        description: "Your connection request has been sent to the guide.",
+      });
+      // Invalidate connections queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/connections'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to send request",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Handle connect with guide
+  const handleConnectGuide = async (guideId: number, data: ConnectionFormValues) => {
+    try {
+      await connectionMutation.mutateAsync({ guideId, data });
+      connectionForm.reset();
+    } catch (error) {
+      console.error("Error connecting with guide:", error);
+    }
+  };
   
   // Get user's current position and update user location in database
   useEffect(() => {
@@ -61,18 +138,47 @@ const SearchPage: React.FC = () => {
   
   // Fetch attractions based on location if possible
   const { data: attractions } = useQuery<any[]>({
-    queryKey: userCoords 
-      ? ['/api/nearby/places', userCoords, { category: 'attraction' }]
-      : ['/api/places', { category: 'attraction' }],
+    queryKey: ['/api/places', { category: 'attraction' }],
     enabled: selectedTab === 'attractions',
   });
   
-  // Fetch guides based on location if possible
+  // Data fetch for nearby attractions, only used if we have user coordinates
+  const { data: nearbyAttractions } = useQuery<any[]>({
+    queryKey: ['/api/nearby/places'],
+    queryFn: async () => {
+      if (!userCoords) return [];
+      const params = new URLSearchParams({
+        latitude: userCoords.latitude,
+        longitude: userCoords.longitude,
+        category: 'attraction'
+      });
+      const response = await fetch(`/api/nearby/places?${params.toString()}`);
+      if (!response.ok) throw new Error('Failed to fetch nearby attractions');
+      return response.json();
+    },
+    enabled: !!userCoords && selectedTab === 'attractions',
+  });
+  
+  // Fetch guides (fallback)
   const { data: guides } = useQuery<any[]>({
-    queryKey: userCoords 
-      ? ['/api/nearby/guides', userCoords]
-      : ['/api/guides'],
+    queryKey: ['/api/guides'],
     enabled: selectedTab === 'guides'
+  });
+  
+  // Data fetch for nearby guides, only used if we have user coordinates
+  const { data: nearbyGuides } = useQuery<any[]>({
+    queryKey: ['/api/nearby/guides'],
+    queryFn: async () => {
+      if (!userCoords) return [];
+      const params = new URLSearchParams({
+        latitude: userCoords.latitude,
+        longitude: userCoords.longitude
+      });
+      const response = await fetch(`/api/nearby/guides?${params.toString()}`);
+      if (!response.ok) throw new Error('Failed to fetch nearby guides');
+      return response.json();
+    },
+    enabled: !!userCoords && selectedTab === 'guides',
   });
   
   const handleCategorySelect = async (category: PlaceCategory) => {
@@ -197,6 +303,7 @@ const SearchPage: React.FC = () => {
             customIcon: true,
             markerType: 'user' as const
           }] : []),
+          
           // Add attractions if we're on attractions tab
           ...(selectedTab === 'attractions' && attractions ? 
             attractions.map((attraction: any) => ({
@@ -209,9 +316,36 @@ const SearchPage: React.FC = () => {
               customIcon: true,
               markerType: 'attraction' as const
             })) : []),
+            
+          // Add nearby attractions if available
+          ...(selectedTab === 'attractions' && nearbyAttractions && nearbyAttractions.length > 0 ? 
+            nearbyAttractions.map((attraction: any) => ({
+              position: { 
+                lat: parseFloat(attraction.latitude), 
+                lng: parseFloat(attraction.longitude) 
+              },
+              title: attraction.name,
+              popup: `<b>${attraction.name}</b><br>${attraction.location}`,
+              customIcon: true,
+              markerType: 'attraction' as const
+            })) : []),
+            
           // Add guides markers if on guides tab
           ...(selectedTab === 'guides' && guides ? 
             guides.map((guide: any) => ({
+              position: { 
+                lat: parseFloat(guide.currentLatitude || "19.0760"), 
+                lng: parseFloat(guide.currentLongitude || "72.8777") 
+              },
+              title: guide.fullName,
+              popup: `<b>${guide.fullName}</b><br>${guide.guideProfile?.specialties?.join(', ') || 'Local Guide'}`,
+              customIcon: true,
+              markerType: 'guide' as const
+            })) : []),
+            
+          // Add nearby guides if available  
+          ...(selectedTab === 'guides' && nearbyGuides && nearbyGuides.length > 0 ? 
+            nearbyGuides.map((guide: any) => ({
               position: { 
                 lat: parseFloat(guide.currentLatitude || "19.0760"), 
                 lng: parseFloat(guide.currentLongitude || "72.8777") 
@@ -331,21 +465,96 @@ const SearchPage: React.FC = () => {
                             </div>
                           </div>
                           <div>
-                            <button className="w-10 h-10 bg-[#DC143C] rounded-full text-white flex items-center justify-center shadow-md">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="w-5 h-5"
-                              >
-                                <path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4c0-1.1.9-2 2-2h8a2 2 0 0 1 2 2v5Z" />
-                                <path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1" />
-                              </svg>
-                            </button>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <button className="w-10 h-10 bg-[#DC143C] rounded-full text-white flex items-center justify-center shadow-md">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="w-5 h-5"
+                                  >
+                                    <path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4c0-1.1.9-2 2-2h8a2 2 0 0 1 2 2v5Z" />
+                                    <path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1" />
+                                  </svg>
+                                </button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogTitle>Connect with {guide.fullName}</DialogTitle>
+                                <DialogDescription>Send a connection request to {guide.fullName}. Once accepted, you can communicate directly.</DialogDescription>
+                                
+                                <Form {...connectionForm}>
+                                  <form onSubmit={connectionForm.handleSubmit((data) => handleConnectGuide(guide.id, data))} className="space-y-4 mt-4">
+                                    <FormField
+                                      control={connectionForm.control}
+                                      name="message"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Your Message</FormLabel>
+                                          <FormControl>
+                                            <Textarea 
+                                              placeholder="Tell the guide about your needs, travel dates, group size, etc." 
+                                              rows={4}
+                                              {...field} 
+                                            />
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                    
+                                    <FormField
+                                      control={connectionForm.control}
+                                      name="tripDetails"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Trip Details</FormLabel>
+                                          <FormControl>
+                                            <Input placeholder="Where are you going? For how long?" {...field} />
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                    
+                                    <FormField
+                                      control={connectionForm.control}
+                                      name="budget"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Budget (Optional)</FormLabel>
+                                          <FormControl>
+                                            <Input placeholder="Your budget in INR" type="number" {...field} />
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                    
+                                    <div className="pt-4 flex justify-end gap-2">
+                                      <DialogClose asChild>
+                                        <Button type="button" variant="outline">Cancel</Button>
+                                      </DialogClose>
+                                      <Button 
+                                        type="submit" 
+                                        disabled={connectionForm.formState.isSubmitting}
+                                      >
+                                        {connectionForm.formState.isSubmitting ? (
+                                          <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Sending...
+                                          </>
+                                        ) : "Send Request"}
+                                      </Button>
+                                    </div>
+                                  </form>
+                                </Form>
+                              </DialogContent>
+                            </Dialog>
                           </div>
                         </div>
                       ))}

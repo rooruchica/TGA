@@ -434,6 +434,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Connection management routes
+  app.post("/api/connections", async (req, res) => {
+    try {
+      const { fromUserId, toUserId, status, message, tripDetails, budget } = req.body;
+      
+      if (!fromUserId || !toUserId || !status || !message || !tripDetails) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      // Prevent self-connections
+      if (fromUserId === toUserId) {
+        return res.status(400).json({ message: "Cannot connect with yourself" });
+      }
+      
+      const connection = await storage.createConnection({
+        fromUserId,
+        toUserId,
+        status,
+        message,
+        tripDetails,
+        budget,
+        createdAt: new Date()
+      });
+      
+      return res.status(201).json(connection);
+    } catch (error) {
+      console.error("Error creating connection:", error);
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+  
+  app.get("/api/connections", async (req, res) => {
+    try {
+      const { userId } = req.query;
+      
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      
+      const connections = await storage.getConnections(parseInt(userId as string));
+      
+      // Get user details for each connection
+      const connectionsWithUsers = await Promise.all(
+        connections.map(async (connection) => {
+          const fromUser = await storage.getUser(connection.fromUserId);
+          const toUser = await storage.getUser(connection.toUserId);
+          
+          const { password: fromPassword, ...fromUserWithoutPassword } = fromUser || {};
+          const { password: toPassword, ...toUserWithoutPassword } = toUser || {};
+          
+          return {
+            ...connection,
+            fromUser: fromUserWithoutPassword,
+            toUser: toUserWithoutPassword
+          };
+        })
+      );
+      
+      return res.json(connectionsWithUsers);
+    } catch (error) {
+      console.error("Error getting connections:", error);
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+  
+  app.patch("/api/connections/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      if (!id || !status) {
+        return res.status(400).json({ message: "Connection ID and status are required" });
+      }
+      
+      const connection = await storage.updateConnectionStatus(parseInt(id), status);
+      
+      if (!connection) {
+        return res.status(404).json({ message: "Connection not found" });
+      }
+      
+      return res.json(connection);
+    } catch (error) {
+      console.error("Error updating connection:", error);
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+  
   // Geolocation routes
   app.post("/api/user/location", async (req, res) => {
     try {

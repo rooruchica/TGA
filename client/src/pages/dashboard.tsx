@@ -7,6 +7,7 @@ import MapView from "@/components/map-view";
 import Categories from "@/components/home/categories";
 import FeaturedPlaces from "@/components/home/featured-places";
 import AvailableGuides from "@/components/home/available-guides";
+import { ChatAssistant } from "@/components/chat-assistant";
 
 const Dashboard: React.FC = () => {
   const [_, setLocation] = useLocation();

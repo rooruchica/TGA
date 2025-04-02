@@ -1,5 +1,5 @@
 import { Switch, Route, useLocation } from "wouter";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import WelcomeScreen from "@/components/welcome-screen";
 import LoginScreen from "@/components/login-screen";
@@ -19,11 +19,89 @@ import GuideRequests from "@/pages/guide-requests";
 import GuideItineraries from "@/pages/guide-itineraries";
 import GuideConnections from "@/pages/guide-connections";
 
-import { useAuth } from "@/lib/AuthContext";
+// Define user type
+export interface User {
+  id: number;
+  username: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  userType: string;
+  isGuide: boolean;
+  createdAt: string | Date;
+}
 
+// Authentication context directly in App
 function App() {
-  const { user, isLoading } = useAuth();
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [, setLocation] = useLocation();
+  
+  // Check if user is already logged in
+  useEffect(() => {
+    try {
+      const storedUser = localStorage.getItem("user");
+      
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setUser({
+          ...parsedUser,
+          isGuide: parsedUser.userType === 'guide'
+        });
+      }
+    } catch (error) {
+      console.error("Error loading user data:", error);
+      localStorage.removeItem("user");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+  
+  // Login function
+  const login = async (username: string, password: string): Promise<User> => {
+    setIsLoading(true);
+    
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Authentication failed");
+      }
+      
+      const data = await response.json();
+      
+      // Create user object with isGuide property
+      const userData: User = {
+        ...data,
+        isGuide: data.userType === 'guide'
+      };
+      
+      // Update state and localStorage
+      setUser(userData);
+      localStorage.setItem("user", JSON.stringify(userData));
+      
+      return userData;
+    } catch (error: any) {
+      throw new Error(error.message || "Authentication failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Logout function
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem("user");
+    setLocation("/");
+  };
+  
+  // Export authentication functions to window
+  (window as any).auth = { login, logout, setUser };
   
   // Redirect users based on their role after login
   useEffect(() => {
@@ -51,12 +129,20 @@ function App() {
     }
   }, [user, isLoading, setLocation]);
 
+  // Pass login function to login screen through props
+  const LoginScreenWithAuth = () => <LoginScreen login={login} />;
+  
+  // Show loading state
+  if (isLoading) {
+    return <div className="h-screen flex items-center justify-center">Loading...</div>;
+  }
+
   return (
     <div id="app-container" className="h-screen flex flex-col">
       <Switch>
         {/* Public routes */}
         <Route path="/" component={WelcomeScreen} />
-        <Route path="/login" component={LoginScreen} />
+        <Route path="/login" component={LoginScreenWithAuth} />
         <Route path="/register" component={RegisterScreen} />
         
         {/* Protected routes - only accessible when logged in */}
@@ -71,7 +157,7 @@ function App() {
                 <Route path="/hotel-booking" component={HotelBooking} />
                 <Route path="/trip-planner" component={TripPlanner} />
                 <Route path="/connections" component={Connections} />
-                <Route path="/profile" component={Profile} />
+                <Route path="/profile" component={() => <Profile user={user} logout={logout} />} />
               </>
             )}
             
@@ -82,16 +168,16 @@ function App() {
                 <Route path="/guide-requests" component={GuideRequests} />
                 <Route path="/guide-itineraries" component={GuideItineraries} />
                 <Route path="/guide-connections" component={GuideConnections} />
-                <Route path="/profile" component={Profile} />
+                <Route path="/profile" component={() => <Profile user={user} logout={logout} />} />
               </>
             )}
           </>
         ) : (
           // Redirect to login if trying to access protected routes while not logged in
           <Route path="/:rest*">
-            {(params) => {
+            {(params: any) => {
               if (params.rest && !['', 'login', 'register'].includes(params.rest)) {
-                window.location.href = '/login';
+                setLocation('/login');
                 return null;
               }
               return <NotFound />;

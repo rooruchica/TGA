@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/lib/AuthContext";
 import { useState } from "react";
+import { User } from "@/App"; // Import User type from App
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -17,10 +17,13 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-const LoginScreen: React.FC = () => {
+interface LoginScreenProps {
+  login: (username: string, password: string) => Promise<User>;
+}
+
+const LoginScreen: React.FC<LoginScreenProps> = ({ login }) => {
   const [_, setLocation] = useLocation();
   const { toast } = useToast();
-  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<LoginFormValues>({
@@ -34,9 +37,11 @@ const LoginScreen: React.FC = () => {
   const onSubmit = async (data: LoginFormValues) => {
     try {
       setIsLoading(true);
-      console.log("Attempting login with:", data.username);
+      console.log("Attempting login for:", data.username);
+      
+      // Attempt login using the login function passed as prop
       const user = await login(data.username, data.password);
-      console.log("Login successful, user:", user);
+      console.log("Login successful:", user);
       
       toast({
         title: "Login successful",
@@ -49,11 +54,13 @@ const LoginScreen: React.FC = () => {
       } else {
         setLocation("/dashboard");
       }
+      
     } catch (error) {
-      console.error("Login error details:", error);
+      console.error("Login failed:", error);
+      
       toast({
         title: "Login failed",
-        description: error instanceof Error ? error.message : "Invalid username or password",
+        description: error instanceof Error ? error.message : "Invalid username or password. Please try again.",
         variant: "destructive",
       });
     } finally {

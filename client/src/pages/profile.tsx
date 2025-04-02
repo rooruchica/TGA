@@ -4,12 +4,16 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import BottomNavigation from "@/components/bottom-navigation";
-import { useAuth } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { User } from "@/App"; // Import User type from App
 
-const Profile: React.FC = () => {
+interface ProfileProps {
+  user: User;
+  logout: () => void;
+}
+
+const Profile: React.FC<ProfileProps> = ({ user, logout }) => {
   const [_, setLocation] = useLocation();
-  const { user, logout } = useAuth();
   const { toast } = useToast();
   
   const [notifications, setNotifications] = useState(true);
@@ -22,7 +26,6 @@ const Profile: React.FC = () => {
       title: "Logged out",
       description: "You have been successfully logged out",
     });
-    setLocation("/");
   };
 
   return (

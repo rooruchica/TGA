@@ -7,8 +7,8 @@ type BaseUser = {
   fullName: string;
   email: string;
   phone?: string;
-  userType: 'tourist' | 'guide';
-  createdAt: string | Date; // Allow string for initial parse from JSON
+  userType: string;
+  createdAt: string | Date;
 };
 
 // User type with isGuide property
@@ -24,7 +24,7 @@ interface AuthContextType {
   isLoading: boolean;
 }
 
-// Create the auth context with default values
+// Create the auth context
 const AuthContext = createContext<AuthContextType>({
   user: null,
   login: async () => { throw new Error("AuthProvider not initialized"); },
@@ -45,104 +45,102 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Check if user is already logged in
   useEffect(() => {
     console.log("AuthProvider initializing...");
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      try {
-        console.log("Found stored user data, attempting to parse");
+    
+    try {
+      const storedUser = localStorage.getItem("user");
+      
+      if (storedUser) {
+        console.log("Found stored user data");
         const parsedUser = JSON.parse(storedUser);
-        console.log("Parsed user:", parsedUser);
         
-        // Make sure the isGuide property is set for existing users
-        if (parsedUser.isGuide === undefined) {
-          console.log("Setting isGuide property based on userType:", parsedUser.userType);
-          parsedUser.isGuide = parsedUser.userType === 'guide';
-          localStorage.setItem("user", JSON.stringify(parsedUser));
-        }
+        // Make sure the isGuide property is set
+        const userData: User = {
+          ...parsedUser,
+          isGuide: parsedUser.userType === 'guide'
+        };
         
-        setUser(parsedUser);
-        console.log("User successfully set from localStorage");
-      } catch (error) {
-        console.error("Failed to parse stored user data:", error);
-        localStorage.removeItem("user");
+        setUser(userData);
+        console.log("User loaded from localStorage");
+      } else {
+        console.log("No stored user found");
       }
-    } else {
-      console.log("No stored user found");
+    } catch (error) {
+      console.error("Error loading user:", error);
+      localStorage.removeItem("user");
+    } finally {
+      setIsLoading(false);
+      console.log("AuthProvider initialization complete");
     }
-    setIsLoading(false);
-    console.log("AuthProvider initialization complete, isLoading set to false");
   }, []);
 
   // Login function
   const login = async (username: string, password: string): Promise<User> => {
+    console.log("Login attempt for:", username);
+    setIsLoading(true);
+    
     try {
-      console.log("Login attempt started for user:", username);
-      setIsLoading(true);
-      
-      // Use fetch directly
-      console.log("Sending login request to API");
+      // Make the API request
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
-        credentials: "include",
       });
       
-      console.log("API response received, status:", response.status);
+      console.log("API response status:", response.status);
       
-      // Parse the response body
-      const data = await response.json();
-      console.log("API response data:", data);
-      
-      // Check if login was successful
+      // Handle non-OK responses
       if (!response.ok) {
-        console.error("Login failed, API error:", data.message);
-        throw new Error(data.message || "Login failed");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Authentication failed");
       }
       
-      // Add the isGuide property based on userType
-      console.log("Creating user data with isGuide property based on userType:", data.userType);
+      // Parse successful response
+      const data = await response.json();
+      console.log("Login success, data:", data);
+      
+      // Create the user object with isGuide property
       const userData: User = {
         ...data,
         isGuide: data.userType === 'guide'
       };
       
-      console.log("Setting user in state:", userData);
+      // Update state and localStorage
       setUser(userData);
-      
-      console.log("Storing user in localStorage");
       localStorage.setItem("user", JSON.stringify(userData));
       
-      console.log("Login successful");
       return userData;
-    } catch (error) {
-      console.error("Login error details:", error);
-      throw error;
+    } catch (error: any) {
+      console.error("Login failed:", error.message || error);
+      throw new Error(error.message || "Authentication failed");
     } finally {
       setIsLoading(false);
-      console.log("Login process complete, isLoading set to false");
     }
   };
 
   // Logout function
   const logout = () => {
-    console.log("Logging out user");
+    console.log("Logging out");
     setUser(null);
     localStorage.removeItem("user");
-    console.log("User logged out successfully");
+  };
+
+  // Create context value
+  const contextValue: AuthContextType = {
+    user,
+    login,
+    logout,
+    isLoading
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
 }
 
 // Hook to use the auth context
-export function useAuth() {
+export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    console.error("useAuth must be used within an AuthProvider");
-  }
   return context;
 }

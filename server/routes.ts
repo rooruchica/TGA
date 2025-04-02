@@ -1,3 +1,4 @@
+
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
@@ -13,6 +14,9 @@ import {
 } from "@shared/schema";
 import { z } from 'zod';
 import { ZodError } from "zod-validation-error";
+import { Mistral } from '@mistralai/mistralai';
+
+const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY || 'jRuxrXPaXaoCLMEarL3mJQH9GaGDjuZJ' });
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
@@ -348,8 +352,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // This route is now handled by the more detailed implementation below
-
   app.patch("/api/connections/:id/status", async (req, res) => {
     try {
       const connectionId = parseInt(req.params.id);
@@ -517,9 +519,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Guide API endpoints
-  //This route is already handled above.
-
   // Geolocation routes
   app.post("/api/user/location", async (req, res) => {
     try {
@@ -603,15 +602,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
-}
-import { Mistral } from '@mistralai/mistralai';
-
-const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY || 'jRuxrXPaXaoCLMEarL3mJQH9GaGDjuZJ' });
-
-export async function registerRoutes(app: Express): Promise<Server> {
-  // Add chat endpoint
+  // Chat endpoint
   app.post('/api/chat', async (req, res) => {
     try {
       const { message } = req.body;
@@ -633,3 +624,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to get response from assistant' });
     }
   });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}

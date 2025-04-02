@@ -433,6 +433,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Server error" });
     }
   });
+  
+  // Geolocation routes
+  app.post("/api/user/location", async (req, res) => {
+    try {
+      const { userId, latitude, longitude } = req.body;
+      
+      if (!userId || !latitude || !longitude) {
+        return res.status(400).json({ message: "User ID, latitude, and longitude are required" });
+      }
+      
+      const parsedUserId = parseInt(userId);
+      
+      if (isNaN(parsedUserId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const user = await storage.updateUserLocation(parsedUserId, latitude, longitude);
+      
+      // Don't return password
+      const { password, ...userWithoutPassword } = user;
+      
+      return res.json(userWithoutPassword);
+    } catch (error) {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+  
+  app.get("/api/nearby/guides", async (req, res) => {
+    try {
+      const { latitude, longitude, radius } = req.query;
+      
+      if (!latitude || !longitude) {
+        return res.status(400).json({ message: "Latitude and longitude are required" });
+      }
+      
+      const radiusKm = radius ? parseInt(radius as string) : undefined;
+      
+      const guides = await storage.getNearbyGuides(
+        latitude as string, 
+        longitude as string, 
+        radiusKm
+      );
+      
+      // Map to remove passwords
+      const guidesWithoutPasswords = await Promise.all(
+        guides.map(async (guide) => {
+          const guideProfile = await storage.getGuideProfile(guide.id);
+          const { password, ...userWithoutPassword } = guide;
+          return { 
+            ...userWithoutPassword, 
+            guideProfile 
+          };
+        })
+      );
+      
+      return res.json(guidesWithoutPasswords);
+    } catch (error) {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+  
+  app.get("/api/nearby/places", async (req, res) => {
+    try {
+      const { latitude, longitude, radius, category } = req.query;
+      
+      if (!latitude || !longitude) {
+        return res.status(400).json({ message: "Latitude and longitude are required" });
+      }
+      
+      const radiusKm = radius ? parseInt(radius as string) : undefined;
+      
+      const places = await storage.getNearbyPlaces(
+        latitude as string, 
+        longitude as string, 
+        radiusKm,
+        category as string | undefined
+      );
+      
+      return res.json(places);
+    } catch (error) {
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

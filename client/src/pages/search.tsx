@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import BottomNavigation from "@/components/bottom-navigation";
 import MapView from "@/components/map-view";
 import POICategories from "@/components/search/poi-categories";
 import { PlaceCategory, GeoapifyPlace, getPlacesNearby } from "@/lib/geoapify";
+import { getCurrentPosition } from "@/lib/geolocation";
 
 const SearchPage: React.FC = () => {
   const [_, setLocation] = useLocation();
@@ -16,23 +17,78 @@ const SearchPage: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState("poi");
   const [mapCenter, setMapCenter] = useState({ lat: 19.0760, lng: 72.8777 }); // Mumbai by default
   const [placesNearby, setPlacesNearby] = useState<GeoapifyPlace[]>([]);
+  const [userCoords, setUserCoords] = useState<{latitude: string, longitude: string} | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
   
-  const { data: attractions } = useQuery({
-    queryKey: ['/api/places', { category: 'attraction' }],
+  // Get user's current position and update user location in database
+  useEffect(() => {
+    const fetchAndUpdatePosition = async () => {
+      try {
+        const position = await getCurrentPosition();
+        const latitude = position.coords.latitude.toString();
+        const longitude = position.coords.longitude.toString();
+        
+        setUserCoords({ latitude, longitude });
+        // Update map center with the user's location
+        setMapCenter({ lat: position.coords.latitude, lng: position.coords.longitude });
+        
+        // Get the user ID from global auth state
+        const auth = (window as any).auth;
+        if (auth && auth.user && auth.user.id) {
+          // Update user's location in the database
+          try {
+            const response = await fetch("/api/user/location", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId: auth.user.id, latitude, longitude }),
+            });
+            
+            if (!response.ok) {
+              console.error("Failed to update user location");
+            }
+          } catch (err) {
+            console.error("Error updating user location:", err);
+          }
+        }
+      } catch (error) {
+        console.error("Error getting location:", error);
+        setLocationError("Could not get your location. Using default location (Mumbai).");
+      }
+    };
+    
+    fetchAndUpdatePosition();
+  }, []);
+  
+  // Fetch attractions based on location if possible
+  const { data: attractions } = useQuery<any[]>({
+    queryKey: userCoords 
+      ? ['/api/nearby/places', userCoords, { category: 'attraction' }]
+      : ['/api/places', { category: 'attraction' }],
     enabled: selectedTab === 'attractions',
   });
   
-  const { data: guides } = useQuery({
-    queryKey: ['/api/guides'],
-    enabled: selectedTab === 'guides',
+  // Fetch guides based on location if possible
+  const { data: guides } = useQuery<any[]>({
+    queryKey: userCoords 
+      ? ['/api/nearby/guides', userCoords]
+      : ['/api/guides'],
+    enabled: selectedTab === 'guides'
   });
   
   const handleCategorySelect = async (category: PlaceCategory) => {
     setActiveCategory(category);
     
     try {
-      const places = await getPlacesNearby(mapCenter, category);
-      setPlacesNearby(places);
+      // Update the location marker on the map when searching POIs
+      if (userCoords) {
+        // If we have user coordinates, use them for the search
+        const places = await getPlacesNearby(mapCenter, category);
+        setPlacesNearby(places);
+      } else {
+        // If we don't have user coordinates, use the current map center
+        const places = await getPlacesNearby(mapCenter, category);
+        setPlacesNearby(places);
+      }
     } catch (error) {
       console.error("Error fetching places:", error);
     }
@@ -129,11 +185,52 @@ const SearchPage: React.FC = () => {
         zoom={13}
         bottomSheetOpen={bottomSheetOpen}
         onBottomSheetOpenChange={setBottomSheetOpen}
-        markers={placesNearby.map((place) => ({
-          position: { lat: place.lat, lng: place.lon },
-          title: place.name || "Point of Interest",
-          popup: `<b>${place.name || "Point of Interest"}</b><br>${place.address_line1 || ""}`,
-        }))}
+        markers={[
+          // Add user's current position marker if available
+          ...(userCoords ? [{
+            position: { 
+              lat: parseFloat(userCoords.latitude), 
+              lng: parseFloat(userCoords.longitude) 
+            },
+            title: "Your Location",
+            popup: "<b>Your Current Location</b>",
+            customIcon: true,
+            markerType: 'user' as const
+          }] : []),
+          // Add attractions if we're on attractions tab
+          ...(selectedTab === 'attractions' && attractions ? 
+            attractions.map((attraction: any) => ({
+              position: { 
+                lat: parseFloat(attraction.latitude), 
+                lng: parseFloat(attraction.longitude) 
+              },
+              title: attraction.name,
+              popup: `<b>${attraction.name}</b><br>${attraction.location}`,
+              customIcon: true,
+              markerType: 'attraction' as const
+            })) : []),
+          // Add guides markers if on guides tab
+          ...(selectedTab === 'guides' && guides ? 
+            guides.map((guide: any) => ({
+              position: { 
+                lat: parseFloat(guide.currentLatitude || "19.0760"), 
+                lng: parseFloat(guide.currentLongitude || "72.8777") 
+              },
+              title: guide.fullName,
+              popup: `<b>${guide.fullName}</b><br>${guide.guideProfile?.specialties?.join(', ') || 'Local Guide'}`,
+              customIcon: true,
+              markerType: 'guide' as const
+            })) : []),
+          
+          // Add nearby POIs
+          ...placesNearby.map((place) => ({
+            position: { lat: place.lat, lng: place.lon },
+            title: place.name || "Point of Interest",
+            popup: `<b>${place.name || "Point of Interest"}</b><br>${place.address_line1 || ""}`,
+            customIcon: true,
+            markerType: 'poi' as const
+          }))
+        ]}
         onMapClick={(coords) => {
           setMapCenter(coords);
           if (activeCategory) {

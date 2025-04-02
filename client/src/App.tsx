@@ -1,9 +1,12 @@
 import { Switch, Route, useLocation } from "wouter";
 import { useEffect, useState } from "react";
 
+// Import components
 import WelcomeScreen from "@/components/welcome-screen";
 import LoginScreen from "@/components/login-screen";
 import RegisterScreen from "@/components/register-screen";
+
+// Import tourist pages
 import Dashboard from "@/pages/dashboard";
 import SearchPage from "@/pages/search";
 import TransportBooking from "@/pages/transport-booking";
@@ -13,7 +16,7 @@ import Connections from "@/pages/connections";
 import Profile from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 
-// Guide pages
+// Import guide pages
 import GuideDashboard from "@/pages/guide-dashboard";
 import GuideRequests from "@/pages/guide-requests";
 import GuideItineraries from "@/pages/guide-itineraries";

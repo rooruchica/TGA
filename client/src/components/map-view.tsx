@@ -18,6 +18,8 @@ interface MapViewProps {
     position: Coordinates;
     title?: string;
     popup?: string;
+    customIcon?: boolean;
+    markerType?: 'attraction' | 'guide' | 'user' | 'poi';
   }>;
   onMapClick?: (coords: Coordinates) => void;
   bottomSheetOpen?: boolean;
@@ -94,11 +96,57 @@ const MapView: React.FC<MapViewProps> = ({
       
       // Add new markers
       markers.forEach((marker) => {
+        // Define marker color and icon based on marker type
+        let bgColor = '#DC143C'; // Default color - crimson
+        let iconHtml = '';
+        
+        if (marker.customIcon) {
+          switch (marker.markerType) {
+            case 'user':
+              bgColor = '#4285F4'; // Blue for user location
+              iconHtml = `<div class="marker-pin bg-[${bgColor}] w-8 h-8 rounded-full flex items-center justify-center text-white shadow-lg border-2 border-white pulse-animation">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
+                  <circle cx="12" cy="12" r="10" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </div>`;
+              break;
+            case 'guide':
+              bgColor = '#34A853'; // Green for guides
+              iconHtml = `<div class="marker-pin bg-[${bgColor}] w-6 h-6 rounded-full flex items-center justify-center text-white shadow-md">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3">
+                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </div>`;
+              break;
+            case 'attraction':
+              bgColor = '#FBBC05'; // Yellow for attractions
+              iconHtml = `<div class="marker-pin bg-[${bgColor}] w-6 h-6 rounded-full flex items-center justify-center text-white shadow-md">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3">
+                  <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />
+                </svg>
+              </div>`;
+              break;
+            default:
+              // Default icon for POIs
+              iconHtml = `<div class="marker-pin bg-[${bgColor}] w-6 h-6 rounded-full flex items-center justify-center text-white shadow-md">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3">
+                  <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+              </div>`;
+          }
+        } else {
+          // Default icon
+          iconHtml = `<div class="marker-pin bg-[${bgColor}] w-6 h-6 rounded-full flex items-center justify-center text-white shadow-md"></div>`;
+        }
+        
         const icon = L.divIcon({
           className: "custom-div-icon",
-          html: `<div class="marker-pin bg-[#DC143C] w-6 h-6 rounded-full flex items-center justify-center text-white shadow-md"></div>`,
-          iconSize: [30, 30],
-          iconAnchor: [15, 15],
+          html: iconHtml,
+          iconSize: marker.markerType === 'user' ? [40, 40] : [30, 30],
+          iconAnchor: marker.markerType === 'user' ? [20, 20] : [15, 15],
         });
         
         const markerInstance = L.marker([marker.position.lat, marker.position.lng], { icon })

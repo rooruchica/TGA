@@ -21,8 +21,8 @@ const client = postgres(DATABASE_URL || '');
 // Create drizzle client
 export const db = drizzle(client);
 
-// Import seed functions
-import { seedAttractions, seedGuides } from './data/seed-attractions';
+// Import seed function for maharashtra tourism data
+import { seedDatabase } from './data/seed-database';
 
 // Initialize the DB
 export async function initializeDatabase() {
@@ -32,115 +32,16 @@ export async function initializeDatabase() {
     // Check if users table has data
     const existingUsers = await db.select().from(users).limit(1);
     if (existingUsers.length === 0) {
-      console.log('Seeding database with initial data...');
+      console.log('Seeding database with Maharashtra tourism data...');
       await seedDatabase();
+    } else {
+      console.log('Database already has users, skipping seed process');
     }
-    
-    // Seed attractions and guides regardless
-    await seedAttractions();
-    await seedGuides();
     
     console.log('Database initialization complete');
     console.log('Database ready');
   } catch (error) {
     console.error('Error initializing database:', error);
-    throw error;
-  }
-}
-
-// Seed the database with initial data
-async function seedDatabase() {
-  try {
-    // Create users
-    const user1 = await db.insert(users).values({
-      username: 'tourist1',
-      password: 'password123',
-      fullName: 'Tourist User',
-      email: 'tourist1@example.com',
-      phone: '+91 9876543210',
-      userType: 'tourist'
-    }).returning();
-
-    const user2 = await db.insert(users).values({
-      username: 'guide1',
-      password: 'password123',
-      fullName: 'Guide User',
-      email: 'guide1@example.com',
-      phone: '+91 9876543211',
-      userType: 'guide'
-    }).returning();
-
-    const user3 = await db.insert(users).values({
-      username: 'guide2',
-      password: 'password123',
-      fullName: 'Another Guide',
-      email: 'guide2@example.com',
-      phone: '+91 9876543212',
-      userType: 'guide'
-    }).returning();
-
-    // Create guide profiles
-    await db.insert(guideProfiles).values({
-      userId: user2[0].id,
-      location: 'Mumbai, Maharashtra',
-      experience: 5,
-      languages: ['English', 'Hindi', 'Marathi'],
-      specialties: ['Historical Sites', 'Adventure', 'Cultural Tours'],
-      rating: 4,
-      bio: 'Experienced guide with knowledge of Maharashtra history and culture.'
-    });
-
-    await db.insert(guideProfiles).values({
-      userId: user3[0].id,
-      location: 'Pune, Maharashtra',
-      experience: 3,
-      languages: ['English', 'Hindi', 'Marathi', 'Gujarati'],
-      specialties: ['Trekking', 'Wildlife', 'Photography'],
-      rating: 4,
-      bio: 'Adventure enthusiast and wildlife expert based in Pune.'
-    });
-
-    // Create places
-    await db.insert(places).values([
-      {
-        name: 'Gateway of India',
-        description: 'Iconic monument located in Mumbai',
-        location: 'Mumbai, Maharashtra',
-        category: 'attraction',
-        latitude: '18.9220',
-        longitude: '72.8347',
-        imageUrl: 'https://images.unsplash.com/photo-1587474260584-136574528ed5'
-      },
-      {
-        name: 'Ellora Caves',
-        description: 'UNESCO World Heritage Site with ancient cave temples',
-        location: 'Aurangabad, Maharashtra',
-        category: 'attraction',
-        latitude: '20.0258',
-        longitude: '75.1792',
-        imageUrl: 'https://images.unsplash.com/photo-1560108878-8145b2a56e9d'
-      },
-      {
-        name: 'Lonavala',
-        description: 'Hill station in the Western Ghats',
-        location: 'Lonavala, Maharashtra',
-        category: 'attraction',
-        latitude: '18.7546',
-        longitude: '73.4062',
-        imageUrl: 'https://images.unsplash.com/photo-1625127251217-01a3e901985c'
-      }
-    ]);
-
-    // Create a sample connection
-    await db.insert(connections).values({
-      touristId: user1[0].id,
-      guideId: user2[0].id,
-      status: 'accepted'
-    });
-
-    console.log('Database seeded successfully!');
-  } catch (error) {
-    console.error('Error seeding database:', error);
     throw error;
   }
 }

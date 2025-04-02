@@ -1,16 +1,55 @@
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { getCurrentPosition } from "@/lib/geolocation";
 
 const AvailableGuides: React.FC = () => {
   const [_, setLocation] = useLocation();
+  const [userCoords, setUserCoords] = useState<{latitude: string, longitude: string} | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
   
+  // Get user's current position
+  useEffect(() => {
+    const fetchPosition = async () => {
+      try {
+        const position = await getCurrentPosition();
+        setUserCoords({
+          latitude: position.coords.latitude.toString(),
+          longitude: position.coords.longitude.toString()
+        });
+      } catch (error) {
+        console.error("Error getting location:", error);
+        setLocationError("Could not get your location. Some features may be limited.");
+      }
+    };
+    
+    fetchPosition();
+  }, []);
+  
+  // Fetch nearby guides if we have user coordinates
   const { data: guides, isLoading } = useQuery({
-    queryKey: ['/api/guides'],
+    queryKey: ['/api/nearby/guides', userCoords],
+    enabled: !!userCoords,
   });
+  
+  // Fallback to all guides if location isn't available
+  const { data: allGuides, isLoading: isLoadingAllGuides } = useQuery({
+    queryKey: ['/api/guides'],
+    enabled: !userCoords,
+  });
+  
+  const guidesToDisplay = userCoords ? guides : allGuides;
+  const isLoadingGuides = userCoords ? isLoading : isLoadingAllGuides;
 
-  if (isLoading) {
+  // Show location error if any
+  if (locationError) {
+    console.log("Location error:", locationError);
+    // We still continue to show guides from the general API
+  }
+  
+  if (isLoadingGuides) {
     return (
       <div>
         <div className="flex justify-between items-center mb-2">
@@ -47,8 +86,8 @@ const AvailableGuides: React.FC = () => {
         </button>
       </div>
       
-      {guides && guides.length > 0 ? (
-        guides.slice(0, 2).map((guide) => (
+      {guidesToDisplay && guidesToDisplay.length > 0 ? (
+        guidesToDisplay.slice(0, 2).map((guide) => (
           <div key={guide.id} className="bg-white rounded-lg shadow-md p-3 mb-3 flex items-center">
             <div className="w-12 h-12 rounded-full bg-gray-200 mr-3 flex items-center justify-center overflow-hidden">
               <svg

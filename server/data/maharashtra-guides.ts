@@ -6,192 +6,192 @@ export const maharashtraGuides: {
 }[] = [
   {
     user: {
-      username: "aditya_guide",
-      password: "password123",
-      fullName: "Aditya Deshmukh",
-      email: "aditya.guide@example.com",
-      phone: "+91 9876543201",
+      username: "ravi_maharaj",
+      password: "guide1234",
+      fullName: "Ravi Maharaj",
+      email: "ravi.maharaj@example.com",
+      phone: "+91 9823456789",
       userType: "guide"
     },
     profile: {
-      userId: 0, // Will be replaced with actual user ID after creation
-      location: "Mumbai, Maharashtra",
+      userId: 0, // Will be set during insertion
+      location: "Mumbai",
       experience: 7,
       languages: ["English", "Hindi", "Marathi"],
-      specialties: ["Historical Sites", "Cultural Tours", "Street Food"],
-      rating: 5,
-      bio: "Mumbai native with extensive knowledge of the city's history and hidden gems."
+      specialties: ["Historical Sites", "Cultural Tours", "Photography Tours"],
+      rating: 4.8,
+      bio: "Experienced guide based in Mumbai with 7 years of showing tourists the hidden gems of Maharashtra. Expert in historical and cultural tours."
     }
   },
   {
     user: {
-      username: "priya_guide",
-      password: "password123",
-      fullName: "Priya Patil",
-      email: "priya.guide@example.com",
-      phone: "+91 9876543202",
+      username: "priya_kulkarni",
+      password: "guide1234",
+      fullName: "Priya Kulkarni",
+      email: "priya.kulkarni@example.com",
+      phone: "+91 9834567890",
       userType: "guide"
     },
     profile: {
       userId: 0,
-      location: "Pune, Maharashtra",
+      location: "Pune",
       experience: 5,
-      languages: ["English", "Hindi", "Marathi"],
-      specialties: ["Historical Forts", "Local Cuisine", "Art Galleries"],
-      rating: 4,
-      bio: "Passionate about Pune's rich history and cultural heritage. Expert in fort treks."
+      languages: ["English", "Hindi", "Marathi", "Gujarati"],
+      specialties: ["Adventure Tours", "Trekking", "Nature Walks"],
+      rating: 4.6,
+      bio: "Adventure enthusiast and certified trekking guide from Pune. Specializes in Sahyadri mountain treks and nature experiences."
     }
   },
   {
     user: {
-      username: "raj_guide",
-      password: "password123",
-      fullName: "Raj Jadhav",
-      email: "raj.guide@example.com",
-      phone: "+91 9876543203",
+      username: "amol_patil",
+      password: "guide1234",
+      fullName: "Amol Patil",
+      email: "amol.patil@example.com",
+      phone: "+91 9845678901",
       userType: "guide"
     },
     profile: {
       userId: 0,
-      location: "Aurangabad, Maharashtra",
-      experience: 8,
+      location: "Aurangabad",
+      experience: 9,
       languages: ["English", "Hindi", "Marathi", "Urdu"],
-      specialties: ["Ajanta Caves", "Ellora Caves", "Historical Monuments"],
-      rating: 5,
-      bio: "Expert in Ajanta and Ellora caves with deep knowledge of Buddhist, Hindu, and Jain art and architecture."
+      specialties: ["Ajanta & Ellora Caves", "Heritage Sites", "Archaeological Tours"],
+      rating: 4.9,
+      bio: "Heritage expert with extensive knowledge of Ajanta and Ellora caves. Former archaeology student turned guide with 9 years of experience."
     }
   },
   {
     user: {
-      username: "sunita_guide",
-      password: "password123",
-      fullName: "Sunita Sharma",
-      email: "sunita.guide@example.com",
-      phone: "+91 9876543204",
+      username: "sangeeta_sharma",
+      password: "guide1234",
+      fullName: "Sangeeta Sharma",
+      email: "sangeeta.sharma@example.com",
+      phone: "+91 9856789012",
       userType: "guide"
     },
     profile: {
       userId: 0,
-      location: "Nashik, Maharashtra",
+      location: "Nashik",
       experience: 4,
       languages: ["English", "Hindi", "Marathi"],
-      specialties: ["Vineyards", "Religious Tours", "Trekking"],
-      rating: 4,
-      bio: "Wine enthusiast and expert in Nashik's vineyards. Also conducts religious tours to Trimbakeshwar."
+      specialties: ["Wine Tours", "Temple Circuits", "Food Tours"],
+      rating: 4.7,
+      bio: "Nashik-based guide specialized in wine tourism and spiritual circuits. Offers unique food and cultural experiences in the region."
     }
   },
   {
     user: {
-      username: "vivek_guide",
-      password: "password123",
-      fullName: "Vivek Kulkarni",
-      email: "vivek.guide@example.com",
-      phone: "+91 9876543205",
+      username: "vikram_jadhav",
+      password: "guide1234",
+      fullName: "Vikram Jadhav",
+      email: "vikram.jadhav@example.com",
+      phone: "+91 9867890123",
       userType: "guide"
     },
     profile: {
       userId: 0,
-      location: "Kolhapur, Maharashtra",
+      location: "Kolhapur",
       experience: 6,
       languages: ["English", "Hindi", "Marathi", "Kannada"],
-      specialties: ["Mahalaxmi Temple", "Local Cuisine", "Cultural Tours"],
-      rating: 5,
-      bio: "Born and raised in Kolhapur with deep knowledge of the region's temples, cuisine, and traditions."
+      specialties: ["Historical Forts", "Temple Tours", "Local Cuisine"],
+      rating: 4.5,
+      bio: "Kolhapur native with deep knowledge of the region's royal history, temples, and culinary traditions. Expert in Maratha fort architecture."
     }
   },
   {
     user: {
-      username: "ananya_guide",
-      password: "password123",
-      fullName: "Ananya Gokhale",
-      email: "ananya.guide@example.com",
-      phone: "+91 9876543206",
+      username: "anita_desai",
+      password: "guide1234",
+      fullName: "Anita Desai",
+      email: "anita.desai@example.com",
+      phone: "+91 9878901234",
       userType: "guide"
     },
     profile: {
       userId: 0,
-      location: "Lonavala, Maharashtra",
+      location: "Lonavala",
       experience: 3,
       languages: ["English", "Hindi", "Marathi"],
-      specialties: ["Trekking", "Nature Tours", "Adventure Sports"],
-      rating: 4,
-      bio: "Adventure enthusiast specializing in trekking and outdoor activities in the Western Ghats."
+      specialties: ["Scenic Hill Stations", "Hiking", "Monsoon Specials"],
+      rating: 4.4,
+      bio: "Nature lover and hiking enthusiast based in Lonavala. Specializes in monsoon tours when the Western Ghats are at their most beautiful."
     }
   },
   {
     user: {
-      username: "nikhil_guide",
-      password: "password123",
-      fullName: "Nikhil Joshi",
-      email: "nikhil.guide@example.com",
-      phone: "+91 9876543207",
+      username: "deepak_chavan",
+      password: "guide1234",
+      fullName: "Deepak Chavan",
+      email: "deepak.chavan@example.com",
+      phone: "+91 9889012345",
       userType: "guide"
     },
     profile: {
       userId: 0,
-      location: "Alibaug, Maharashtra",
+      location: "Alibaug",
       experience: 5,
-      languages: ["English", "Hindi", "Marathi"],
-      specialties: ["Beach Activities", "Water Sports", "Historical Forts"],
-      rating: 4,
-      bio: "Coastal expert offering tours to Alibaug's beaches, forts, and water sports activities."
+      languages: ["English", "Hindi", "Marathi", "Konkani"],
+      specialties: ["Beach Tours", "Coastal Forts", "Water Sports"],
+      rating: 4.6,
+      bio: "Coastal expert from Alibaug specializing in beach tourism, historical coastal forts, and water activities along the Konkan coast."
     }
   },
   {
     user: {
-      username: "meera_guide",
-      password: "password123",
-      fullName: "Meera Dixit",
-      email: "meera.guide@example.com",
-      phone: "+91 9876543208",
+      username: "meera_joshi",
+      password: "guide1234",
+      fullName: "Meera Joshi",
+      email: "meera.joshi@example.com",
+      phone: "+91 9890123456",
       userType: "guide"
     },
     profile: {
       userId: 0,
-      location: "Mahabaleshwar, Maharashtra",
+      location: "Nagpur",
+      experience: 8,
+      languages: ["English", "Hindi", "Marathi", "Telugu"],
+      specialties: ["Wildlife Tours", "Tiger Safaris", "Tribal Culture"],
+      rating: 4.8,
+      bio: "Wildlife expert from Nagpur specializing in Tadoba and Pench tiger reserves. Knowledgeable about Central Indian tribal cultures and traditions."
+    }
+  },
+  {
+    user: {
+      username: "rahul_sawant",
+      password: "guide1234",
+      fullName: "Rahul Sawant",
+      email: "rahul.sawant@example.com",
+      phone: "+91 9901234567",
+      userType: "guide"
+    },
+    profile: {
+      userId: 0,
+      location: "Mahabaleshwar",
       experience: 4,
       languages: ["English", "Hindi", "Marathi"],
-      specialties: ["Strawberry Farms", "Scenic Points", "Nature Trails"],
-      rating: 5,
-      bio: "Nature lover with comprehensive knowledge of Mahabaleshwar's viewpoints and strawberry farms."
+      specialties: ["Strawberry Farms", "Scenic Viewpoints", "Photography Tours"],
+      rating: 4.5,
+      bio: "Hill station expert based in Mahabaleshwar. Specializes in strawberry farm tours, nature photography, and hidden viewpoints in the region."
     }
   },
   {
     user: {
-      username: "sanjay_guide",
-      password: "password123",
-      fullName: "Sanjay Pawar",
-      email: "sanjay.guide@example.com",
-      phone: "+91 9876543209",
+      username: "nisha_patil",
+      password: "guide1234",
+      fullName: "Nisha Patil",
+      email: "nisha.patil@example.com",
+      phone: "+91 9912345678",
       userType: "guide"
     },
     profile: {
       userId: 0,
-      location: "Ratnagiri, Maharashtra",
-      experience: 7,
-      languages: ["English", "Hindi", "Marathi", "Konkani"],
-      specialties: ["Beaches", "Seafood Cuisine", "Historical Sites"],
-      rating: 4,
-      bio: "Konkan expert specializing in coastal Maharashtra's beaches, cuisine, and historical sites."
-    }
-  },
-  {
-    user: {
-      username: "ritu_guide",
-      password: "password123",
-      fullName: "Ritu Patel",
-      email: "ritu.guide@example.com",
-      phone: "+91 9876543210",
-      userType: "guide"
-    },
-    profile: {
-      userId: 0,
-      location: "Shirdi, Maharashtra",
+      location: "Ratnagiri",
       experience: 6,
-      languages: ["English", "Hindi", "Marathi", "Gujarati"],
-      specialties: ["Religious Tours", "Cultural Experience", "Local History"],
-      rating: 5,
-      bio: "Spiritual guide with deep knowledge about Sai Baba and the religious significance of Shirdi."
+      languages: ["English", "Hindi", "Marathi", "Konkani"],
+      specialties: ["Coastal Tourism", "Seafood Tours", "Alphonso Mango Farms"],
+      rating: 4.7,
+      bio: "Konkan coast specialist from Ratnagiri. Expert in local seafood, Alphonso mango plantations, and pristine beaches of the Konkan region."
     }
   }
 ];

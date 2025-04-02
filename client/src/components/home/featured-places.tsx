@@ -33,7 +33,10 @@ const FeaturedPlaces: React.FC<FeaturedPlacesProps> = ({ places, isLoading }) =>
     );
   }
 
-  const featuredPlaces = places.filter(place => place.category === 'attraction').slice(0, 5);
+  // Filter for all attractions without limiting to 5
+  const featuredPlaces = places.filter(place => 
+    ['attraction', 'monument', 'heritage', 'landmark'].includes(place.category)
+  );
 
   return (
     <div className="mb-6">

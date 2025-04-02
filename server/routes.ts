@@ -105,11 +105,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const guides = await storage.getAvailableGuides();
 
-      // Filter active guides who have profiles and are real guides from seed data
+      // Filter active guides who have profiles
       const activeGuides = guides.filter(guide => 
         guide.userType === 'guide' && 
-        guide.guideProfile && 
-        guide.username !== 'gurbani'
+        guide.guideProfile
       );
 
       // Sort guides by experience level

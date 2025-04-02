@@ -1,5 +1,6 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
+import { useEffect } from "react";
 
 import WelcomeScreen from "@/components/welcome-screen";
 import LoginScreen from "@/components/login-screen";
@@ -22,10 +23,38 @@ import GuideConnections from "@/pages/guide-connections";
 import { useAuth } from "@/lib/auth";
 
 function App() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+  
+  // Redirect users based on their role after login
+  useEffect(() => {
+    if (!isLoading && user) {
+      const currentPath = window.location.pathname;
+      
+      // If user is at root, login, or register page, redirect to appropriate dashboard
+      if (['/', '/login', '/register'].includes(currentPath)) {
+        if (user.isGuide) {
+          setLocation('/guide-dashboard');
+        } else {
+          setLocation('/dashboard');
+        }
+      }
+      
+      // If guide tries to access tourist pages or tourist tries to access guide pages, redirect
+      const guidePaths = ['/guide-dashboard', '/guide-requests', '/guide-itineraries', '/guide-connections'];
+      const touristPaths = ['/dashboard', '/search', '/transport-booking', '/hotel-booking', '/trip-planner', '/connections'];
+      
+      if (user.isGuide && touristPaths.includes(currentPath)) {
+        setLocation('/guide-dashboard');
+      } else if (!user.isGuide && guidePaths.includes(currentPath)) {
+        setLocation('/dashboard');
+      }
+    }
+  }, [user, isLoading, setLocation]);
 
   return (
     <div id="app-container" className="h-screen flex flex-col">
+      <Toaster />
       <Switch>
         {/* Public routes */}
         <Route path="/" component={WelcomeScreen} />
@@ -35,20 +64,29 @@ function App() {
         {/* Protected routes - only accessible when logged in */}
         {user ? (
           <>
-            {/* Tourist routes */}
-            <Route path="/dashboard" component={Dashboard} />
-            <Route path="/search" component={SearchPage} />
-            <Route path="/transport-booking" component={TransportBooking} />
-            <Route path="/hotel-booking" component={HotelBooking} />
-            <Route path="/trip-planner" component={TripPlanner} />
-            <Route path="/connections" component={Connections} />
-            <Route path="/profile" component={Profile} />
+            {/* Tourist routes - only show if user is not a guide */}
+            {!user.isGuide && (
+              <>
+                <Route path="/dashboard" component={Dashboard} />
+                <Route path="/search" component={SearchPage} />
+                <Route path="/transport-booking" component={TransportBooking} />
+                <Route path="/hotel-booking" component={HotelBooking} />
+                <Route path="/trip-planner" component={TripPlanner} />
+                <Route path="/connections" component={Connections} />
+                <Route path="/profile" component={Profile} />
+              </>
+            )}
             
-            {/* Guide routes */}
-            <Route path="/guide-dashboard" component={GuideDashboard} />
-            <Route path="/guide-requests" component={GuideRequests} />
-            <Route path="/guide-itineraries" component={GuideItineraries} />
-            <Route path="/guide-connections" component={GuideConnections} />
+            {/* Guide routes - only show if user is a guide */}
+            {user.isGuide && (
+              <>
+                <Route path="/guide-dashboard" component={GuideDashboard} />
+                <Route path="/guide-requests" component={GuideRequests} />
+                <Route path="/guide-itineraries" component={GuideItineraries} />
+                <Route path="/guide-connections" component={GuideConnections} />
+                <Route path="/profile" component={Profile} />
+              </>
+            )}
           </>
         ) : (
           // Redirect to login if trying to access protected routes while not logged in

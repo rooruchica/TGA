@@ -54,19 +54,28 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const login = async (username: string, password: string): Promise<User> => {
     try {
       setIsLoading(true);
-      const response = await apiRequest("POST", "/api/auth/login", { username, password });
       
+      // Modified to use fetch directly since we need to check the response status
+      // and also read the body
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+        credentials: "include",
+      });
+      
+      // Parse the response body
+      const data = await response.json();
+      
+      // Check if login was successful
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Login failed");
+        throw new Error(data.message || "Login failed");
       }
-      
-      const baseUserData: BaseUser = await response.json();
       
       // Add the isGuide property based on userType
       const userData: User = {
-        ...baseUserData,
-        isGuide: baseUserData.userType === 'guide'
+        ...data,
+        isGuide: data.userType === 'guide'
       };
       
       setUser(userData);

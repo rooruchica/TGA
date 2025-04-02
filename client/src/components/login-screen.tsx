@@ -34,7 +34,9 @@ const LoginScreen: React.FC = () => {
   const onSubmit = async (data: LoginFormValues) => {
     try {
       setIsLoading(true);
+      console.log("Attempting login with:", data.username);
       const user = await login(data.username, data.password);
+      console.log("Login successful, user:", user);
       
       toast({
         title: "Login successful",
@@ -48,6 +50,7 @@ const LoginScreen: React.FC = () => {
         setLocation("/dashboard");
       }
     } catch (error) {
+      console.error("Login error details:", error);
       toast({
         title: "Login failed",
         description: error instanceof Error ? error.message : "Invalid username or password",

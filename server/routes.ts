@@ -606,3 +606,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
+import { Mistral } from '@mistralai/mistralai';
+
+const mistral = new Mistral('jRuxrXPaXaoCLMEarL3mJQH9GaGDjuZJ');
+
+// Add this to your existing routes
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { message } = req.body;
+    
+    const chatResponse = await mistral.chat.completions.create({
+      model: 'mistral-tiny',
+      messages: [{
+        role: 'system',
+        content: 'You are a knowledgeable Maharashtra tour guide assistant. Help tourists with information about places, culture, travel tips, and local experiences in Maharashtra.'
+      }, {
+        role: 'user',
+        content: message
+      }]
+    });
+
+    res.json({ response: chatResponse.choices[0].message.content });
+  } catch (error) {
+    console.error('Chat error:', error);
+    res.status(500).json({ error: 'Failed to get response from assistant' });
+  }
+});

@@ -56,9 +56,6 @@ const BusForm: React.FC = () => {
         setLocation('/login');
         return;
       }
-    
-    try {
-      setIsSubmitting(true);
       
       const bookingData = {
         userId: user.id,

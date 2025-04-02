@@ -105,11 +105,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const guides = await storage.getAvailableGuides();
 
+      // Filter active guides who have profiles and are real guides from seed data
+      const activeGuides = guides.filter(guide => 
+        guide.userType === 'guide' && 
+        guide.guideProfile && 
+        guide.username !== 'gurbani'
+      );
+
       // Sort guides by experience level
-      guides.sort((a, b) => (b.guideProfile?.experience || 0) - (a.guideProfile?.experience || 0));
+      activeGuides.sort((a, b) => (b.guideProfile?.experience || 0) - (a.guideProfile?.experience || 0));
 
       // Map to remove passwords
-      const guidesWithoutPasswords = guides.map(guide => {
+      const guidesWithoutPasswords = activeGuides.map(guide => {
         const { password, ...userWithoutPassword } = guide;
         return { ...userWithoutPassword, guideProfile: guide.guideProfile };
       });

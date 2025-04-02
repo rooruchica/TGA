@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, date } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, date, doublePrecision } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -11,6 +11,9 @@ export const users = pgTable("users", {
   email: text("email").notNull(),
   phone: text("phone"),
   userType: text("user_type").notNull(), // 'tourist' or 'guide'
+  currentLatitude: text("current_latitude"),
+  currentLongitude: text("current_longitude"),
+  lastLocationUpdate: timestamp("last_location_update"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

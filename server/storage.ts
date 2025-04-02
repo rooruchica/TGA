@@ -47,6 +47,11 @@ export interface IStorage {
   getSavedPlaces(userId: number): Promise<SavedPlace[]>;
   savePlaceForUser(savedPlace: InsertSavedPlace): Promise<SavedPlace>;
   removeSavedPlace(id: number): Promise<void>;
+  
+  // Geolocation methods
+  updateUserLocation(userId: number, latitude: string, longitude: string): Promise<User>;
+  getNearbyGuides(latitude: string, longitude: string, radiusKm?: number): Promise<User[]>;
+  getNearbyPlaces(latitude: string, longitude: string, radiusKm?: number, category?: string): Promise<Place[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -251,6 +256,83 @@ export class MemStorage implements IStorage {
     this.savedPlaces.delete(id);
   }
   
+  // Geolocation methods
+  async updateUserLocation(userId: number, latitude: string, longitude: string): Promise<User> {
+    const user = this.users.get(userId);
+    
+    if (!user) {
+      throw new Error(`User with ID ${userId} not found`);
+    }
+    
+    const updatedUser: User = {
+      ...user,
+      currentLatitude: latitude,
+      currentLongitude: longitude,
+      lastLocationUpdate: new Date()
+    };
+    
+    this.users.set(userId, updatedUser);
+    return updatedUser;
+  }
+  
+  async getNearbyGuides(latitude: string, longitude: string, radiusKm: number = 10): Promise<User[]> {
+    const lat = parseFloat(latitude);
+    const lon = parseFloat(longitude);
+    
+    const guides = Array.from(this.users.values()).filter(user => 
+      user.userType === 'guide' && 
+      user.currentLatitude && 
+      user.currentLongitude
+    );
+    
+    return guides.filter(guide => {
+      const guideLat = parseFloat(guide.currentLatitude!);
+      const guideLon = parseFloat(guide.currentLongitude!);
+      
+      // Calculate distance using haversine formula
+      const R = 6371; // Earth's radius in km
+      const dLat = (guideLat - lat) * Math.PI / 180;
+      const dLon = (guideLon - lon) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat * Math.PI / 180) * Math.cos(guideLat * Math.PI / 180) * 
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const distance = R * c;
+      
+      return distance <= radiusKm;
+    });
+  }
+  
+  async getNearbyPlaces(latitude: string, longitude: string, radiusKm: number = 10, category?: string): Promise<Place[]> {
+    const lat = parseFloat(latitude);
+    const lon = parseFloat(longitude);
+    
+    let filteredPlaces = Array.from(this.places.values());
+    
+    if (category) {
+      filteredPlaces = filteredPlaces.filter(place => place.category === category);
+    }
+    
+    return filteredPlaces.filter(place => {
+      const placeLat = parseFloat(place.latitude);
+      const placeLon = parseFloat(place.longitude);
+      
+      // Calculate distance using haversine formula
+      const R = 6371; // Earth's radius in km
+      const dLat = (placeLat - lat) * Math.PI / 180;
+      const dLon = (placeLon - lon) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat * Math.PI / 180) * Math.cos(placeLat * Math.PI / 180) * 
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const distance = R * c;
+      
+      return distance <= radiusKm;
+    });
+  }
+  
   private initializeSampleData() {
     // Create sample users
     const user1: User = {
@@ -261,6 +343,9 @@ export class MemStorage implements IStorage {
       email: 'aaaryaannn@gmail.com',
       phone: '+919876543210',
       userType: 'tourist',
+      currentLatitude: '18.9220', // Near Gateway of India, Mumbai
+      currentLongitude: '72.8347',
+      lastLocationUpdate: new Date(),
       createdAt: new Date()
     };
     
@@ -272,6 +357,9 @@ export class MemStorage implements IStorage {
       email: 'john@guide.com',
       phone: '+919876543211',
       userType: 'guide',
+      currentLatitude: '18.9217', // Near Taj Hotel, Mumbai
+      currentLongitude: '72.8332',
+      lastLocationUpdate: new Date(),
       createdAt: new Date()
     };
     
@@ -283,6 +371,9 @@ export class MemStorage implements IStorage {
       email: 'sara@guide.com',
       phone: '+919876543212',
       userType: 'guide',
+      currentLatitude: '18.5195', // Near Shaniwar Wada, Pune
+      currentLongitude: '73.8554',
+      lastLocationUpdate: new Date(),
       createdAt: new Date()
     };
     

@@ -12,15 +12,41 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  // Ensure URL starts with '/api' to be correctly proxied
+  const apiUrl = url.startsWith('/api') ? url : `/api${url}`;
+  
+  console.log(`Making ${method} request to: ${apiUrl}`);
+  if (data) {
+    console.log('Request payload:', JSON.stringify(data));
+  }
+  
+  try {
+    const res = await fetch(apiUrl, {
+      method,
+      headers: data ? { "Content-Type": "application/json" } : {},
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+    });
 
-  await throwIfResNotOk(res);
-  return res;
+    console.log(`Response status: ${res.status} ${res.statusText}`);
+    
+    // Clone the response to log the body while preserving the original
+    if (!res.ok) {
+      const clonedRes = res.clone();
+      try {
+        const errorText = await clonedRes.text();
+        console.error(`Error response: ${errorText}`);
+      } catch (e) {
+        console.error('Could not read error response body');
+      }
+    }
+    
+    await throwIfResNotOk(res);
+    return res;
+  } catch (error) {
+    console.error(`Request to ${apiUrl} failed:`, error);
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

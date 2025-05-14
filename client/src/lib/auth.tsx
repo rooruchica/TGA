@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 
 // Define a base user type if we can't import from schema
 type BaseUser = {
-  id: number;
+  id: string;
   username: string;
   fullName: string;
   email: string;
@@ -78,11 +78,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
         throw new Error(data.message || "Login failed");
       }
       
+      // Ensure the user has an ID
+      if (!data.id) {
+        throw new Error("User ID is missing from login response");
+      }
+      
       // Add the isGuide property based on userType
       const userData: User = {
         ...data,
-        isGuide: data.userType === 'guide'
+        isGuide: data.userType === 'guide',
+        id: data.id // Ensure ID is explicitly set
       };
+      
+      console.log("Setting user data after login:", userData);
       
       setUser(userData);
       localStorage.setItem("user", JSON.stringify(userData));

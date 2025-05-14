@@ -1,11 +1,9 @@
 import { db } from "../db";
-import { users, guideProfiles, places, 
-         insertUserSchema, insertGuideProfileSchema, insertPlaceSchema } from "@shared/schema";
+import { userSchema, guideProfileSchema, placeSchema } from "@shared/schema";
 import { maharashtraAttractions } from "./maharashtra-attractions";
 import { maharashtraGuides } from "./maharashtra-guides";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
-import { eq } from "drizzle-orm";
 
 const scryptAsync = promisify(scrypt);
 
@@ -26,8 +24,8 @@ export async function seedDatabase() {
   
   try {
     // Check if there's any data already
-    const userCount = await db.select({ count: users.id }).from(users);
-    if (userCount[0].count > 0) {
+    const userCount = await db.collection('users').countDocuments();
+    if (userCount > 0) {
       console.log("Database already seeded. Skipping seeding process.");
       return;
     }
@@ -42,6 +40,7 @@ export async function seedDatabase() {
       userType: "tourist",
       currentLatitude: "18.9220", // Gateway of India location
       currentLongitude: "72.8347",
+      createdAt: new Date()
     };
     
     const tourist2 = {
@@ -53,6 +52,7 @@ export async function seedDatabase() {
       userType: "tourist",
       currentLatitude: "18.5204", // Pune location
       currentLongitude: "73.8567",
+      createdAt: new Date()
     };
     
     const tourist3 = {
@@ -64,45 +64,70 @@ export async function seedDatabase() {
       userType: "tourist",
       currentLatitude: "19.9975", // Nashik location
       currentLongitude: "73.7898",
+      createdAt: new Date()
     };
     
     console.log("Inserting tourist users...");
-    await db.insert(users).values([
-      insertUserSchema.parse(demoTourist),
-      insertUserSchema.parse(tourist2),
-      insertUserSchema.parse(tourist3)
+    await db.collection('users').insertMany([
+      userSchema.parse(demoTourist),
+      userSchema.parse(tourist2),
+      userSchema.parse(tourist3)
     ]);
     
     // Seed guide users and profiles
     console.log("Inserting guide users and profiles...");
-    for (const guide of maharashtraGuides) {
+    
+    // Define fixed locations for guides in Maharashtra
+    const guideLocations = [
+      { lat: 18.92, lng: 72.83 }, // Mumbai
+      { lat: 18.52, lng: 73.85 }, // Pune
+      { lat: 19.99, lng: 73.78 }, // Nashik
+      { lat: 19.15, lng: 72.82 }, // Thane
+      { lat: 18.40, lng: 76.58 }, // Latur
+      { lat: 16.70, lng: 74.24 }, // Kolhapur
+      { lat: 20.12, lng: 79.95 }, // Chandrapur
+      { lat: 21.14, lng: 79.08 }, // Nagpur
+      { lat: 19.09, lng: 74.74 }, // Ahmednagar
+      { lat: 19.87, lng: 75.34 }  // Aurangabad
+    ];
+    
+    // Use regular for loop instead of entries() to avoid TypeScript issues
+    for (let index = 0; index < maharashtraGuides.length; index++) {
+      const guide = maharashtraGuides[index];
+      
       // Hash the guide password
       const hashedPassword = await hashPassword(guide.user.password);
       
-      // Insert the guide user first
-      const [insertedGuide] = await db.insert(users)
-        .values(insertUserSchema.parse({
-          ...guide.user,
-          password: hashedPassword,
-          // Set random coordinates near Mumbai for testing
-          currentLatitude: (18.92 + (Math.random() * 0.1)).toString(),
-          currentLongitude: (72.83 + (Math.random() * 0.1)).toString(),
-        }))
-        .returning();
+      // Get the fixed location for this guide (use index modulo to handle more guides than locations)
+      const locationIndex = index % guideLocations.length;
+      const location = guideLocations[locationIndex];
+      
+      // Insert the guide user first with fixed coordinates
+      const guideUser = userSchema.parse({
+        ...guide.user,
+        password: hashedPassword,
+        currentLatitude: location.lat.toString(),
+        currentLongitude: location.lng.toString(),
+        createdAt: new Date()
+      });
+      
+      const result = await db.collection('users').insertOne(guideUser);
       
       // Then insert the guide profile with the correct userId
-      await db.insert(guideProfiles)
-        .values(insertGuideProfileSchema.parse({
+      await db.collection('guideProfiles').insertOne(
+        guideProfileSchema.parse({
           ...guide.profile,
-          userId: insertedGuide.id
-        }));
+          userId: result.insertedId.toString()
+        })
+      );
     }
     
     // Seed places/attractions
     console.log("Inserting Maharashtra attractions...");
     for (const attraction of maharashtraAttractions) {
-      await db.insert(places)
-        .values(insertPlaceSchema.parse(attraction));
+      await db.collection('places').insertOne(
+        placeSchema.parse(attraction)
+      );
     }
     
     console.log("Database seeding completed successfully!");

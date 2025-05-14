@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .card {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea, button {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 10px;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #results {
+            white-space: pre-wrap;
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Maharashtra Tour Guide API Test</h1>
+        
+        <div class="card">
+            <h2>Register New Guide</h2>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" value="test_guide_2" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" value="test_guide_2@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" value="test123" required>
+                </div>
+                <div class="form-group">
+                    <label for="fullName">Full Name:</label>
+                    <input type="text" id="fullName" value="Test Guide Two" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Phone:</label>
+                    <input type="text" id="phone" value="9998887775">
+                </div>
+                <div class="form-group">
+                    <label for="location">Location:</label>
+                    <input type="text" id="location" value="Pune">
+                </div>
+                <div class="form-group">
+                    <label for="languages">Languages (comma separated):</label>
+                    <input type="text" id="languages" value="English, Hindi, Marathi">
+                </div>
+                <div class="form-group">
+                    <label for="specialties">Specialties (comma separated):</label>
+                    <input type="text" id="specialties" value="Historical Sites, Adventure, Cultural Tours">
+                </div>
+                <div class="form-group">
+                    <label for="experience">Experience (years):</label>
+                    <input type="number" id="experience" value="3">
+                </div>
+                <div class="form-group">
+                    <label for="bio">Bio:</label>
+                    <textarea id="bio" rows="3">Experienced guide in Pune area specializing in historical sites.</textarea>
+                </div>
+                <button type="submit">Register Guide</button>
+            </form>
+        </div>
+        
+        <div class="card">
+            <h2>Get All Guides</h2>
+            <button id="getAllGuides">Fetch All Guides</button>
+        </div>
+        
+        <div class="card">
+            <h2>Get Nearby Guides</h2>
+            <div class="form-group">
+                <label for="latitude">Latitude:</label>
+                <input type="text" id="latitude" value="18.52">
+            </div>
+            <div class="form-group">
+                <label for="longitude">Longitude:</label>
+                <input type="text" id="longitude" value="73.85">
+            </div>
+            <button id="getNearbyGuides">Fetch Nearby Guides</button>
+        </div>
+        
+        <div class="card">
+            <h2>Results</h2>
+            <div id="results">No results yet. Use the forms above to test the API.</div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.textContent = 'Registering guide...';
+            
+            try {
+                const languages = document.getElementById('languages').value.split(',').map(lang => lang.trim());
+                const specialties = document.getElementById('specialties').value.split(',').map(spec => spec.trim());
+                
+                const guideData = {
+                    username: document.getElementById('username').value,
+                    email: document.getElementById('email').value,
+                    password: document.getElementById('password').value,
+                    fullName: document.getElementById('fullName').value,
+                    phone: document.getElementById('phone').value,
+                    userType: 'guide',
+                    guideProfile: {
+                        location: document.getElementById('location').value,
+                        experience: parseInt(document.getElementById('experience').value),
+                        languages: languages,
+                        specialties: specialties,
+                        rating: 4.5,
+                        bio: document.getElementById('bio').value
+                    }
+                };
+                
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(guideData)
+                });
+                
+                const data = await response.json();
+                resultsDiv.textContent = 'Registration Result:\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultsDiv.textContent = 'Error registering guide: ' + error.message;
+            }
+        });
+        
+        document.getElementById('getAllGuides').addEventListener('click', async function() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.textContent = 'Fetching all guides...';
+            
+            try {
+                const response = await fetch('/api/guides');
+                const data = await response.json();
+                resultsDiv.textContent = 'All Guides:\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultsDiv.textContent = 'Error fetching guides: ' + error.message;
+            }
+        });
+        
+        document.getElementById('getNearbyGuides').addEventListener('click', async function() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.textContent = 'Fetching nearby guides...';
+            
+            try {
+                const latitude = document.getElementById('latitude').value;
+                const longitude = document.getElementById('longitude').value;
+                
+                const response = await fetch(`/api/nearby/guides?latitude=${latitude}&longitude=${longitude}`);
+                const data = await response.json();
+                resultsDiv.textContent = 'Nearby Guides:\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultsDiv.textContent = 'Error fetching nearby guides: ' + error.message;
+            }
+        });
+    </script>
+</body>
+</html> 

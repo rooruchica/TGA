@@ -1,5 +1,7 @@
 import { Switch, Route, useLocation } from "wouter";
 import { useEffect, useState } from "react";
+import { fetchApi } from "@/lib/api-client";
+import { checkServerAndShowError } from "@/lib/check-server";
 
 // Import components
 import WelcomeScreen from "@/components/welcome-screen";
@@ -14,6 +16,7 @@ import HotelBooking from "@/pages/hotel-booking";
 import TripPlanner from "@/pages/trip-planner";
 import Connections from "@/pages/connections";
 import Profile from "@/pages/profile";
+import GuideProfile from "@/pages/guide-profile";
 import NotFound from "@/pages/not-found";
 
 // Import guide pages
@@ -24,7 +27,7 @@ import GuideConnections from "@/pages/guide-connections";
 
 // Define user type
 export interface User {
-  id: number;
+  id: string;
   username: string;
   fullName: string;
   email: string;
@@ -39,18 +42,45 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [, setLocation] = useLocation();
+  const [serverChecked, setServerChecked] = useState(false);
   
-  // Check if user is already logged in
+  // Check if backend server is running
   useEffect(() => {
+    async function checkServer() {
+      const isServerRunning = await checkServerAndShowError();
+      setServerChecked(true);
+      if (!isServerRunning) {
+        setIsLoading(false);
+      }
+    }
+    
+    checkServer();
+  }, []);
+  
+  // Check if user is already logged in (only after server check)
+  useEffect(() => {
+    if (!serverChecked) return;
+    
     try {
       const storedUser = localStorage.getItem("user");
       
       if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        setUser({
-          ...parsedUser,
-          isGuide: parsedUser.userType === 'guide'
-        });
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          if (parsedUser && parsedUser.id) {
+            setUser({
+              ...parsedUser,
+              isGuide: parsedUser.userType === 'guide'
+            });
+            console.log("User loaded from localStorage:", parsedUser.id);
+          } else {
+            console.error("Invalid user data in localStorage:", parsedUser);
+            localStorage.removeItem("user");
+          }
+        } catch (parseError) {
+          console.error("Error parsing user data:", parseError);
+          localStorage.removeItem("user");
+        }
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -58,25 +88,21 @@ function App() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [serverChecked]);
   
   // Login function
   const login = async (username: string, password: string): Promise<User> => {
     setIsLoading(true);
     
     try {
-      const response = await fetch("/api/auth/login", {
+      // Check if username is an email
+      const email = username.includes('@') ? username : undefined;
+      
+      const data = await fetchApi<User>("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, email }),
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Authentication failed");
-      }
-      
-      const data = await response.json();
       
       // Create user object with isGuide property
       const userData: User = {
@@ -181,7 +207,7 @@ function App() {
                 <Route path="/guide-requests" component={GuideRequests} />
                 <Route path="/guide-itineraries" component={GuideItineraries} />
                 <Route path="/guide-connections" component={GuideConnections} />
-                <Route path="/profile" component={() => <Profile user={user} logout={logout} />} />
+                <Route path="/guide-profile" component={GuideProfile} />
               </>
             )}
           </>

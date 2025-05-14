@@ -1,8 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { seedDatabase } from "./data/seed-data";
 import { seedMissingData } from "./data/seed-missing-data";
+import { MongoClient } from "mongodb";
+import { initializeDatabase } from "./db";
 
 const app = express();
 app.use(express.json());
@@ -38,12 +39,25 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  const originalSend = res.send;
+  res.send = function(body) {
+    console.log(`[${new Date().toISOString()}] Response for ${req.method} ${req.url}: ${res.statusCode}`);
+    if (res.statusCode >= 400) {
+      console.log(`Error Response Body: ${typeof body === 'object' ? JSON.stringify(body) : body}`);
+    }
+    return originalSend.call(this, body);
+  };
+  next();
+});
+
 (async () => {
   // Initialize database and seed data
   console.log("Initializing database...");
   try {
-    await seedDatabase();
-    // Additionally seed any missing attractions and guides
+    await initializeDatabase();
+    // Add missing attractions and guides with fixed locations
     await seedMissingData();
     console.log("Database initialization complete");
     console.log("Database ready");
@@ -76,8 +90,7 @@ app.use((req, res, next) => {
   const port = 5000;
   server.listen({
     port,
-    host: "0.0.0.0",
-    reusePort: true,
+    host: "localhost",
   }, () => {
     log(`serving on port ${port}`);
   });

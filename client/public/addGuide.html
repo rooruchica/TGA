@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Guide User</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1 { color: #DC143C; }
+    button {
+      background-color: #DC143C;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    button:hover { background-color: #B01030; }
+    pre {
+      background-color: #f5f5f5;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    .field {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Add Guide User to Database</h1>
+  <p>This tool directly adds a guide user to your database for testing purposes.</p>
+  
+  <div class="field">
+    <label for="username">Username:</label>
+    <input type="text" id="username" value="guide">
+  </div>
+  
+  <div class="field">
+    <label for="password">Password:</label>
+    <input type="text" id="password" value="guide">
+  </div>
+  
+  <div class="field">
+    <label for="email">Email:</label>
+    <input type="email" id="email" value="guide@example.com">
+  </div>
+  
+  <div class="field">
+    <label for="fullName">Full Name:</label>
+    <input type="text" id="fullName" value="Test Guide">
+  </div>
+  
+  <button id="addGuideBtn">Add Guide User</button>
+  
+  <h2>Results:</h2>
+  <pre id="results">Results will appear here...</pre>
+  
+  <script>
+    document.getElementById('addGuideBtn').addEventListener('click', async () => {
+      const resultsElement = document.getElementById('results');
+      resultsElement.textContent = 'Adding guide user...';
+      
+      try {
+        // Get values from inputs
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const email = document.getElementById('email').value;
+        const fullName = document.getElementById('fullName').value;
+        
+        // First try to login with these credentials to see if they already exist
+        const loginResponse = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        
+        if (loginResponse.ok) {
+          const userData = await loginResponse.json();
+          resultsElement.textContent = `Guide user already exists!\n\nUser details:\n${JSON.stringify(userData, null, 2)}`;
+          return;
+        }
+        
+        // Use the debug endpoint to create a guide user directly
+        const createResponse = await fetch('/api/debug/create-guide', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-Debug-Mode': 'true'
+          },
+          body: JSON.stringify({
+            username,
+            password,
+            email,
+            fullName,
+            phone: '9876543210'
+          })
+        });
+        
+        const createData = await createResponse.json();
+        
+        if (createResponse.ok) {
+          resultsElement.textContent = `Successfully added guide user!\n\nUser details:\n${JSON.stringify(createData, null, 2)}\n\nYou can now log in with:\nUsername: ${username}\nPassword: ${password}`;
+        } else {
+          resultsElement.textContent = `Failed to add guide user: ${createData.message || 'Unknown error'}\n\nResponse: ${JSON.stringify(createData, null, 2)}`;
+        }
+      } catch (error) {
+        resultsElement.textContent = `Error: ${error.message}`;
+      }
+    });
+  </script>
+</body>
+</html> 

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { User } from "@/App"; // Import User type from App
+import { User } from "@/pages/App"; // Fixed import path
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -39,8 +39,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ login }) => {
       setIsLoading(true);
       console.log("Attempting login for:", data.username);
       
+      // Use the username as both username and email
+      // This ensures the server can check both fields
+      const username = data.username;
+      const email = data.username.includes('@') ? data.username : undefined;
+      
       // Attempt login using the login function passed as prop
-      const user = await login(data.username, data.password);
+      const user = await login(username, data.password);
       console.log("Login successful:", user);
       
       toast({
@@ -68,6 +73,23 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ login }) => {
     }
   };
 
+  // Quick login functions for development
+  const quickLoginAsTourist = () => {
+    if (process.env.NODE_ENV === 'development') {
+      form.setValue('username', 'test');
+      form.setValue('password', 'test');
+      form.handleSubmit(onSubmit)();
+    }
+  };
+
+  const quickLoginAsGuide = () => {
+    if (process.env.NODE_ENV === 'development') {
+      form.setValue('username', 'guide');
+      form.setValue('password', 'guide');
+      form.handleSubmit(onSubmit)();
+    }
+  };
+
   return (
     <div className="h-full flex flex-col items-center justify-center bg-white p-6">
       <h1 className="text-2xl font-bold font-sans mb-6">Maharashtra Wanderer</h1>
@@ -84,6 +106,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ login }) => {
               Register
             </button>
           </div>
+          
+
           
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

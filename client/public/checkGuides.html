@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Check Guide Users</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1 { color: #DC143C; }
+    button {
+      background-color: #DC143C;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+    button:hover { background-color: #B01030; }
+    pre {
+      background-color: #f5f5f5;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    #guideList {
+      list-style-type: none;
+      padding: 0;
+    }
+    .guide-item {
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+    }
+    .guide-item h3 {
+      margin-top: 0;
+      color: #DC143C;
+    }
+    .login-btn {
+      background-color: #4CAF50;
+      margin-top: 10px;
+    }
+    .login-btn:hover {
+      background-color: #3e8e41;
+    }
+  </style>
+</head>
+<body>
+  <h1>Check Guide Users in Database</h1>
+  <p>This utility page helps you check existing guide users and test login.</p>
+  
+  <button id="checkGuidesBtn">Check Guide Users</button>
+  
+  <div id="loadingMessage" style="display:none;">Loading guide users...</div>
+  
+  <div id="guideContainer" style="display:none;">
+    <h2>Available Guide Users:</h2>
+    <ul id="guideList"></ul>
+  </div>
+  
+  <h2>Manual Login Test:</h2>
+  <div class="guide-item">
+    <h3>Test Login</h3>
+    <div>
+      <label for="testUsername">Username:</label>
+      <input type="text" id="testUsername" value="guide">
+    </div>
+    <div style="margin-top:10px;">
+      <label for="testPassword">Password:</label>
+      <input type="text" id="testPassword" value="guide">
+    </div>
+    <button id="testLoginBtn" class="login-btn">Test Login</button>
+    <pre id="loginResults">Login results will appear here...</pre>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const checkGuidesBtn = document.getElementById('checkGuidesBtn');
+      const loadingMessage = document.getElementById('loadingMessage');
+      const guideContainer = document.getElementById('guideContainer');
+      const guideList = document.getElementById('guideList');
+      const testLoginBtn = document.getElementById('testLoginBtn');
+      const loginResults = document.getElementById('loginResults');
+      
+      // Function to check guide users
+      checkGuidesBtn.addEventListener('click', async () => {
+        loadingMessage.style.display = 'block';
+        guideContainer.style.display = 'none';
+        guideList.innerHTML = '';
+        
+        try {
+          // Create an endpoint for getting users of type 'guide' (for admin testing purposes only)
+          const response = await fetch('/api/debug/guides', {
+            headers: { 'X-Debug-Mode': 'true' }
+          });
+          
+          if (!response.ok) {
+            guideList.innerHTML = `<li class="guide-item">
+              <h3>Error</h3>
+              <p>Debug endpoint not available. You may need to add it to your server for this tool to work.</p>
+              <p>Consider using the registration form to create a guide user manually.</p>
+            </li>`;
+            loadingMessage.style.display = 'none';
+            guideContainer.style.display = 'block';
+            return;
+          }
+          
+          const guides = await response.json();
+          
+          if (guides.length === 0) {
+            guideList.innerHTML = `<li class="guide-item">
+              <h3>No Guide Users Found</h3>
+              <p>No guide users were found in the database.</p>
+              <p>Use the Add Guide User tool to create one.</p>
+            </li>`;
+          } else {
+            guides.forEach(guide => {
+              const guideItem = document.createElement('li');
+              guideItem.className = 'guide-item';
+              
+              // Create sanitized output (remove password for security)
+              const safeGuide = {...guide};
+              if (safeGuide.password) safeGuide.password = '********';
+              
+              guideItem.innerHTML = `
+                <h3>${guide.fullName || guide.username}</h3>
+                <p><strong>Username:</strong> ${guide.username}</p>
+                <p><strong>Email:</strong> ${guide.email}</p>
+                <button class="login-btn" data-username="${guide.username}" data-password="${guide.password || 'guide'}">Login as this guide</button>
+                <pre>${JSON.stringify(safeGuide, null, 2)}</pre>
+              `;
+              
+              guideList.appendChild(guideItem);
+            });
+            
+            // Add event listeners for login buttons
+            document.querySelectorAll('.login-btn[data-username]').forEach(btn => {
+              btn.addEventListener('click', async () => {
+                const username = btn.getAttribute('data-username');
+                const password = btn.getAttribute('data-password');
+                
+                try {
+                  const loginResponse = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                  });
+                  
+                  if (loginResponse.ok) {
+                    const data = await loginResponse.json();
+                    alert(`Login successful! User: ${data.username}, Type: ${data.userType}`);
+                    window.location.href = '/'; // Redirect to homepage
+                  } else {
+                    const error = await loginResponse.json();
+                    alert(`Login failed: ${error.message || 'Unknown error'}`);
+                  }
+                } catch (error) {
+                  alert(`Error: ${error.message}`);
+                }
+              });
+            });
+          }
+        } catch (error) {
+          guideList.innerHTML = `<li class="guide-item">
+            <h3>Error</h3>
+            <p>Failed to fetch guide users: ${error.message}</p>
+          </li>`;
+        }
+        
+        loadingMessage.style.display = 'none';
+        guideContainer.style.display = 'block';
+      });
+      
+      // Test login with manual credentials
+      testLoginBtn.addEventListener('click', async () => {
+        const username = document.getElementById('testUsername').value;
+        const password = document.getElementById('testPassword').value;
+        loginResults.textContent = 'Testing login...';
+        
+        try {
+          console.log('Attempting login with:', { username, password });
+          
+          const loginResponse = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+          });
+          
+          console.log('Login response status:', loginResponse.status);
+          const responseData = await loginResponse.json();
+          console.log('Login response data:', responseData);
+          
+          if (loginResponse.ok) {
+            loginResults.textContent = `Login successful!\n\nUser details:\n${JSON.stringify(responseData, null, 2)}`;
+            
+            // Optional: Redirect after successful login
+            if (confirm('Login successful! Redirect to the main page?')) {
+              window.location.href = '/';
+            }
+          } else {
+            loginResults.textContent = `Login failed: ${responseData.message || 'Unknown error'}\n\nStatus: ${loginResponse.status}\n\nResponse: ${JSON.stringify(responseData, null, 2)}`;
+          }
+        } catch (error) {
+          console.error('Login error:', error);
+          loginResults.textContent = `Error: ${error.message}`;
+        }
+      });
+    });
+  </script>
+</body>
+</html> 

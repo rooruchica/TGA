@@ -55,6 +55,7 @@ const RegisterScreen: React.FC = () => {
       
       const { confirmPassword, ...userData } = data;
       
+      // Register using the API
       const response = await apiRequest("POST", "/api/auth/register", {
         ...userData,
         userType,

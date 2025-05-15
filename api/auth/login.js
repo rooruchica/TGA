@@ -5,6 +5,9 @@ const { MongoClient, ObjectId } = require('mongodb');
 async function connectToDatabase() {
   try {
     const uri = process.env.MONGODB_URI;
+    console.log('Environment variables:', Object.keys(process.env).join(', '));
+    console.log('MONGODB_URI exists:', !!process.env.MONGODB_URI);
+    
     if (!uri) {
       console.warn('MONGODB_URI environment variable is not set');
       return null;
@@ -73,6 +76,9 @@ function getFallbackUser(username) {
 }
 
 module.exports = async (req, res) => {
+  console.log('Login request received:', req.method, req.url);
+  console.log('Request headers:', JSON.stringify(req.headers));
+  
   // Handle preflight OPTIONS request
   if (req.method === 'OPTIONS') {
     return handleOptions(res);
@@ -96,6 +102,8 @@ module.exports = async (req, res) => {
   try {
     // Parse request body manually
     const body = await parseBody(req);
+    console.log('Request body:', JSON.stringify(body));
+    
     const { username, password, email } = body;
     
     console.log('Login attempt for:', { username, email });
@@ -106,7 +114,9 @@ module.exports = async (req, res) => {
     }
     
     // Connect to MongoDB
+    console.log('Attempting to connect to MongoDB...');
     connection = await connectToDatabase();
+    console.log('MongoDB connection result:', !!connection);
     
     // If MongoDB connection failed, use fallback login
     if (!connection) {

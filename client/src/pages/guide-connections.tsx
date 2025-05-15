@@ -964,9 +964,33 @@ const GuideConnections: React.FC = () => {
                               >
                                 <span className="flex items-center">
                                   <MessageSquare className="w-4 h-4 mr-2" />
-              Message Tourist
+                                  Message Tourist
                                 </span>
-            </Button>
+                              </Button>
+                              <Button 
+                                className="flex-1 bg-[#DC143C] hover:bg-[#B01030]"
+                                onClick={() => setLocation('/guide-itineraries')}
+                              >
+                                <span className="flex items-center">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="w-4 h-4 mr-2"
+                                  >
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <path d="M14 2v6h6" />
+                                    <path d="M16 13H8" />
+                                    <path d="M16 17H8" />
+                                    <path d="M10 9H8" />
+                                  </svg>
+                                  Create Itinerary
+                                </span>
+                              </Button>
                             </div>
                           </div>
                         );

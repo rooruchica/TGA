@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: maharashtra-tour-guide-backend
+    env: node
+    buildCommand: yarn && yarn build
+    startCommand: NODE_ENV=production node dist/index.js
+    plan: free
+    envVars:
+      - key: MONGODB_URI
+        sync: false # This will need to be manually set in the Render dashboard
+      - key: NODE_ENV
+        value: production 

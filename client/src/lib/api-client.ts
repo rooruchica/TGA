@@ -1,9 +1,9 @@
 // API configuration for the application
 // In production, we use the BACKEND_URL from env, falling back to relative URL to ensure it works correctly when deployed
-// In development, we use localhost:5000
+// In development, we use localhost:10000
 export const API_BASE_URL = import.meta.env.PROD 
   ? (import.meta.env.VITE_BACKEND_URL || 'https://tga-8py8.onrender.com') // Use Render URL in production
-  : 'http://localhost:5000';
+  : 'http://localhost:10000';
 
 /**
  * Returns the full API URL for a given path

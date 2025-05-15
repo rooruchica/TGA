@@ -27,7 +27,29 @@ export function getApiUrl(path: string): string {
  * @param options - Fetch options
  * @returns Promise with the JSON response
  */
-export async function fetchApi<T>(url: string, options?: RequestInit): Promise<T> {
+export async function fetchApi<T>(url: string, options?: RequestInit): Promise<T>;
+export async function fetchApi<T>(method: string, url: string, body?: any): Promise<T>;
+export async function fetchApi<T>(urlOrMethod: string, optionsOrUrl?: RequestInit | string, body?: any): Promise<T> {
+  // Handle the overloaded method signature
+  let url: string;
+  let options: RequestInit = {};
+  
+  if (typeof optionsOrUrl === 'string') {
+    // Called with (method, url, body)
+    url = optionsOrUrl;
+    options = {
+      method: urlOrMethod,
+      body: body ? JSON.stringify(body) : undefined,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
+  } else {
+    // Called with (url, options)
+    url = urlOrMethod;
+    options = optionsOrUrl || {};
+  }
+  
   // If the URL doesn't start with http, assume it's a relative path
   const fullUrl = url.startsWith('http') ? url : getApiUrl(url);
   
@@ -36,7 +58,7 @@ export async function fetchApi<T>(url: string, options?: RequestInit): Promise<T
       ...options,
       headers: {
         'Content-Type': 'application/json',
-        ...options?.headers,
+        ...options.headers,
       },
     });
 

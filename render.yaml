@@ -2,7 +2,7 @@ services:
   - type: web
     name: maharashtra-tour-guide-backend
     env: node
-    buildCommand: chmod +x ./render-build.sh && ./render-build.sh
+    buildCommand: npm install && npm install -D tailwindcss postcss autoprefixer @tailwindcss/typography && npm run build
     startCommand: NODE_ENV=production node dist/index.js
     plan: free
     envVars:
@@ -10,9 +10,5 @@ services:
         sync: false # This will need to be manually set in the Render dashboard
       - key: NODE_ENV
         value: production
-      - key: NPM_CONFIG_PREFIX
-        value: ~/.npm-global
-      - key: PATH
-        value: ~/.npm-global/bin:$PATH
       - key: RENDER
         value: 'true' 

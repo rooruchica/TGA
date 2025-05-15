@@ -2,11 +2,15 @@ services:
   - type: web
     name: maharashtra-tour-guide-backend
     env: node
-    buildCommand: npm install && npm run build
+    buildCommand: npm install && npm run render-build
     startCommand: NODE_ENV=production node dist/index.js
     plan: free
     envVars:
       - key: MONGODB_URI
         sync: false # This will need to be manually set in the Render dashboard
       - key: NODE_ENV
-        value: production 
+        value: production
+      - key: NPM_CONFIG_PREFIX
+        value: ~/.npm-global
+      - key: PATH
+        value: ~/.npm-global/bin:$PATH 

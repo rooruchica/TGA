@@ -5,12 +5,11 @@ import { useAuth } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import GuideBottomNavigation from "@/components/guide/bottom-navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { apiRequest } from "@/lib/queryClient";
+import { StarIcon, CheckCircle2 } from "lucide-react";
 
 interface GuideProfile {
   id: string;
@@ -29,13 +28,8 @@ const GuideProfile: React.FC = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const [formData, setFormData] = useState({
-    location: "",
-    specialties: [] as string[],
-    languages: [] as string[],
-    experience: 0,
-    bio: "",
-  });
+  // Preview mode is always enabled
+  const isPreviewMode = true;
 
   // Fetch guide profile
   const { data: profile, isLoading } = useQuery<GuideProfile>({
@@ -47,47 +41,9 @@ const GuideProfile: React.FC = () => {
     },
     enabled: !!user?.id,
   });
-
-  // Update form data when profile is loaded
-  useEffect(() => {
-    if (profile) {
-      setFormData({
-        location: profile.location || "",
-        specialties: profile.specialties || [],
-        languages: profile.languages || [],
-        experience: profile.experience || 0,
-        bio: profile.bio || "",
-      });
-    }
-  }, [profile]);
-
-  // Update profile mutation
-  const updateProfile = useMutation({
-    mutationFn: async (data: typeof formData) => {
-      const response = await apiRequest("PATCH", `/api/guide/${user?.id}/profile`, data);
-      if (!response.ok) throw new Error('Failed to update profile');
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Profile updated",
-        description: "Your guide profile has been updated successfully.",
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/guide', user?.id, 'profile'] });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to update profile. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateProfile.mutate(formData);
-  };
+  
+  // Get current user from window.auth if not available from context
+  const currentUser = user || (window as any).auth?.user;
 
   if (isLoading) {
     return (
@@ -99,103 +55,136 @@ const GuideProfile: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col pb-14">
-      {/* Header */}
-      <div className="p-4 border-b">
+      {/* Header with Preview Mode toggle */}
+      <div className="p-4 border-b flex justify-between items-center">
         <h2 className="text-2xl font-bold">Guide Profile</h2>
+        <div className="flex items-center">
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-1">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Preview Mode
+          </Badge>
+        </div>
       </div>
 
-      {/* Profile Content */}
+      {/* Profile Preview */}
       <div className="flex-1 overflow-y-auto p-4">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Profile Picture */}
-          <div className="flex items-center space-x-4">
-            <Avatar className="h-20 w-20">
-              <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username}`} />
-              <AvatarFallback>{user?.name?.[0]}</AvatarFallback>
-            </Avatar>
-            <div>
-              <h3 className="text-lg font-semibold">{user?.name}</h3>
-              <p className="text-sm text-gray-500">@{user?.username}</p>
+        <Card className="shadow-md mb-6">
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center text-center">
+              {/* Improved Avatar */}
+              <div className="relative mb-4">
+                <Avatar className="h-24 w-24 border-4 border-white shadow-lg">
+                  <AvatarImage 
+                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.username || 'guide'}`} 
+                    alt={currentUser?.name || "Guide"} 
+                    className="bg-blue-50"
+                  />
+                  <AvatarFallback className="bg-blue-100 text-blue-700 text-2xl">
+                    {currentUser?.name?.[0] || 'G'}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+              
+              <h3 className="text-xl font-bold">{currentUser?.name || "Guide Name"}</h3>
+              <p className="text-sm text-gray-500 mb-2">@{currentUser?.username || "username"}</p>
+              
+              {/* Rating */}
+              <div className="flex items-center justify-center mb-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <StarIcon 
+                    key={i}
+                    className={`h-5 w-5 ${i < (profile?.rating || 4.5) 
+                      ? "text-yellow-400 fill-yellow-400" 
+                      : "text-gray-300"}`}
+                  />
+                ))}
+                <span className="ml-2 font-semibold text-gray-700">{profile?.rating || 4.5}</span>
+              </div>
+              
+              {/* Location */}
+              <p className="text-gray-600 mb-4 flex items-center justify-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-4 h-4 mr-1 text-gray-500"
+                >
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                {profile?.location || "Maharashtra, India"}
+              </p>
             </div>
-          </div>
-
-          {/* Location */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Location
-            </label>
-            <Input
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              placeholder="Enter your location"
-            />
-          </div>
-
-          {/* Experience */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Years of Experience
-            </label>
-            <Input
-              type="number"
-              value={formData.experience}
-              onChange={(e) => setFormData({ ...formData, experience: parseInt(e.target.value) })}
-              placeholder="Enter years of experience"
-            />
-          </div>
-
-          {/* Specialties */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Specialties (comma-separated)
-            </label>
-            <Input
-              value={formData.specialties.join(", ")}
-              onChange={(e) => setFormData({
-                ...formData,
-                specialties: e.target.value.split(",").map(s => s.trim()).filter(Boolean)
-              })}
-              placeholder="e.g., Historical Tours, Adventure Tours, Cultural Tours"
-            />
-          </div>
-
-          {/* Languages */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Languages (comma-separated)
-            </label>
-            <Input
-              value={formData.languages.join(", ")}
-              onChange={(e) => setFormData({
-                ...formData,
-                languages: e.target.value.split(",").map(s => s.trim()).filter(Boolean)
-              })}
-              placeholder="e.g., English, Hindi, Marathi"
-            />
-          </div>
-
-          {/* Bio */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Bio
-            </label>
-            <Textarea
-              value={formData.bio}
-              onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-              placeholder="Tell us about yourself and your guiding experience"
-              rows={4}
-            />
-          </div>
-
-          {/* Submit Button */}
-          <Button
-            type="submit"
-            className="w-full bg-[#DC143C] hover:bg-[#B01030]"
-            disabled={updateProfile.isPending}
-          >
-            {updateProfile.isPending ? "Updating..." : "Update Profile"}
-          </Button>
-        </form>
+            
+            {/* Bio */}
+            <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+              <h4 className="font-semibold mb-2 text-gray-700">About Me</h4>
+              <p className="text-gray-600">{profile?.bio || "I'm a passionate tour guide with extensive knowledge of Maharashtra's culture, history, and hidden gems."}</p>
+            </div>
+            
+            {/* Experience */}
+            <div className="mb-4">
+              <h4 className="font-semibold mb-2 text-gray-700">Experience</h4>
+              <p className="text-gray-600">{profile?.experience || 5} years as a professional guide</p>
+            </div>
+            
+            {/* Specialties */}
+            <div className="mb-4">
+              <h4 className="font-semibold mb-2 text-gray-700">Specialties</h4>
+              <div className="flex flex-wrap gap-2">
+                {(profile?.specialties || ["Historical Tours", "Cultural Experiences", "Adventure Tours"]).map((specialty, i) => (
+                  <Badge key={i} variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
+                    {specialty}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            
+            {/* Languages */}
+            <div className="mb-4">
+              <h4 className="font-semibold mb-2 text-gray-700">Languages</h4>
+              <div className="flex flex-wrap gap-2">
+                {(profile?.languages || ["English", "Hindi", "Marathi"]).map((language, i) => (
+                  <Badge key={i} variant="outline" className="bg-green-50 text-green-700 hover:bg-green-100">
+                    {language}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            
+            {/* How tourists will see your profile */}
+            <div className="mt-8 border-t pt-6">
+              <h4 className="font-semibold text-center mb-4 text-gray-700">How tourists will see your profile</h4>
+              <div className="bg-white border rounded-lg p-4 flex items-center">
+                <Avatar className="h-16 w-16 mr-4">
+                  <AvatarImage 
+                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.username || 'guide'}`} 
+                    alt={currentUser?.name || "Guide"} 
+                  />
+                  <AvatarFallback>{currentUser?.name?.[0] || 'G'}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h5 className="font-semibold">{currentUser?.name || "Guide Name"}</h5>
+                  <div className="flex items-center mt-1">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <StarIcon 
+                        key={i}
+                        className={`h-4 w-4 ${i < (profile?.rating || 4.5) 
+                          ? "text-yellow-400 fill-yellow-400" 
+                          : "text-gray-300"}`}
+                      />
+                    ))}
+                    <span className="ml-1 text-sm font-medium">{profile?.rating || 4.5}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Bottom Navigation */}

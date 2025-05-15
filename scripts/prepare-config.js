@@ -6,6 +6,54 @@ import { execSync } from 'child_process';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
 
+// Analyze project structure
+const analyzeProjectStructure = () => {
+  console.log('🔍 Analyzing project structure...');
+  
+  // Check if index.html exists in client folder
+  const clientIndexPath = path.join(projectRoot, 'client', 'index.html');
+  const rootIndexPath = path.join(projectRoot, 'index.html');
+  
+  let indexHtmlPath = null;
+  if (fs.existsSync(clientIndexPath)) {
+    indexHtmlPath = clientIndexPath;
+    console.log('📄 Found index.html in client folder');
+  } else if (fs.existsSync(rootIndexPath)) {
+    indexHtmlPath = rootIndexPath;
+    console.log('📄 Found index.html in project root');
+  } else {
+    console.log('⚠️ Could not find index.html');
+  }
+  
+  // Analyze current vite.config.ts
+  const viteConfigPath = path.join(projectRoot, 'vite.config.ts');
+  let originalConfig = null;
+  if (fs.existsSync(viteConfigPath)) {
+    try {
+      originalConfig = fs.readFileSync(viteConfigPath, 'utf8');
+      console.log('📄 Found vite.config.ts');
+      
+      // Try to extract root path from config
+      const rootMatch = originalConfig.match(/root:\s*['"](.*?)['"]/);
+      if (rootMatch && rootMatch[1]) {
+        console.log(`📂 Detected root path in vite config: ${rootMatch[1]}`);
+      }
+      
+      const rootPathVarMatch = originalConfig.match(/root:\s*path\.resolve\(.*?,\s*["'](.+?)["']/);
+      if (rootPathVarMatch && rootPathVarMatch[1]) {
+        console.log(`📂 Detected resolved root path: ${rootPathVarMatch[1]}`);
+      }
+    } catch (error) {
+      console.log('⚠️ Could not read vite.config.ts');
+    }
+  }
+  
+  return {
+    indexHtmlPath,
+    originalConfig
+  };
+};
+
 // Path to the config files
 const viteConfigPath = path.join(projectRoot, 'vite.config.ts');
 const clientDir = path.join(projectRoot, 'client');
@@ -24,6 +72,9 @@ if (isRender) {
   console.log('📋 Running on Render, creating compatible config...');
   
   try {
+    // Analyze the project structure first
+    const { indexHtmlPath, originalConfig } = analyzeProjectStructure();
+    
     // Install required CSS dependencies globally to ensure they're available
     console.log('📦 Installing required CSS dependencies globally...');
     execSync('npm install -g autoprefixer postcss tailwindcss @tailwindcss/typography', { stdio: 'inherit' });
@@ -58,13 +109,9 @@ if (isRender) {
       console.log('🗑️ Removed Tailwind config file');
     }
 
-    // Copy our minimal vite config to the main vite config path
-    if (fs.existsSync(minimalViteConfigPath)) {
-      fs.copyFileSync(minimalViteConfigPath, viteConfigPath);
-      console.log('✅ Minimal Vite config copied successfully!');
-    } else {
-      // Create a minimal vite config with PostCSS disabled
-      const minimalConfig = `
+    // Create a minimal vite config with no CSS dependencies
+    // Using information from our project structure analysis
+    const minimalConfig = `
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -72,7 +119,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Most minimal configuration possible with no external dependencies
+// Simplified vite config for Render deployment
 export default defineConfig({
   plugins: [react()],
   css: {
@@ -81,20 +128,38 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "client", "src"),
+      "@": path.resolve(__dirname, "client/src"),
       "@shared": path.resolve(__dirname, "shared"),
       "@assets": path.resolve(__dirname, "attached_assets"),
     },
   },
-  root: path.resolve(__dirname, "client"),
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
   },
 });`;
-      
-      fs.writeFileSync(viteConfigPath, minimalConfig);
-      console.log('✅ Minimal Vite config created successfully!');
+    
+    fs.writeFileSync(viteConfigPath, minimalConfig);
+    console.log('✅ Minimal Vite config created successfully!');
+    
+    // Create a simple index.html file if needed
+    const indexHtml = path.join(projectRoot, 'index.html');
+    if (!fs.existsSync(indexHtml)) {
+      console.log('📝 Creating simple index.html in project root...');
+      const simpleHtml = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Maharashtra Tour Guide</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/client/src/main.tsx"></script>
+  </body>
+</html>`;
+      fs.writeFileSync(indexHtml, simpleHtml);
+      console.log('✅ Created index.html in project root');
     }
     
   } catch (error) {

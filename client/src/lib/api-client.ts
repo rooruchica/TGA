@@ -1,5 +1,9 @@
 // API configuration for the application
-export const API_BASE_URL = 'http://localhost:5000';
+// In production, we use a relative URL to ensure it works correctly when deployed
+// In development, we use localhost:5000
+export const API_BASE_URL = import.meta.env.PROD 
+  ? '' // Empty string for relative URLs in production
+  : 'http://localhost:5000';
 
 /**
  * Creates a full API URL by appending the path to the base URL

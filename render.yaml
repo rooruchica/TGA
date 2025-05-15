@@ -13,4 +13,6 @@ services:
       - key: NPM_CONFIG_PREFIX
         value: ~/.npm-global
       - key: PATH
-        value: ~/.npm-global/bin:$PATH 
+        value: ~/.npm-global/bin:$PATH
+      - key: RENDER
+        value: 'true' 

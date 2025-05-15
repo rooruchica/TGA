@@ -2,7 +2,7 @@ services:
   - type: web
     name: maharashtra-tour-guide-backend
     env: node
-    buildCommand: npm install && npm run render-build
+    buildCommand: chmod +x ./render-build.sh && ./render-build.sh
     startCommand: NODE_ENV=production node dist/index.js
     plan: free
     envVars:

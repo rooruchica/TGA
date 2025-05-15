@@ -13,7 +13,55 @@ export function getCurrentPosition(): Promise<GeolocationPosition> {
       return;
     }
     
-    // First check if we have permission
+    // Handle Android WebView geolocation differently
+    const isAndroidWebView = /Android/.test(navigator.userAgent) && /wv/.test(navigator.userAgent);
+    
+    if (isAndroidWebView) {
+      console.log("Detected Android WebView, using direct geolocation request");
+      
+      // Direct request without permission check for Android WebView
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          console.log("Android WebView: Location obtained successfully:", {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy
+          });
+          resolve(position);
+        },
+        (error) => {
+          console.error("Android WebView: Error getting location:", error);
+          let errorMessage = "Failed to get your location";
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = "Location permission denied. Please enable location access in your device settings.";
+              // Show custom dialog to guide users to device settings
+              if (window.confirm("This app needs location permission to work properly. Please go to Settings > Apps > [App Name] > Permissions and enable Location.")) {
+                // This can't directly open settings but provides guidance
+                console.log("User acknowledged permission guidance");
+              }
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = "Location information is unavailable.";
+              break;
+            case error.TIMEOUT:
+              errorMessage = "Location request timed out.";
+              break;
+            default:
+              errorMessage = "An unknown error occurred while getting your location.";
+          }
+          reject(new Error(errorMessage));
+        },
+        { 
+          enableHighAccuracy: true, 
+          timeout: 15000, // Longer timeout for Android
+          maximumAge: 0 
+        }
+      );
+      return;
+    }
+    
+    // Browser approach with permission check
     navigator.permissions.query({ name: 'geolocation' as PermissionName })
       .then(permissionStatus => {
         if (permissionStatus.state === 'denied') {
@@ -22,7 +70,7 @@ export function getCurrentPosition(): Promise<GeolocationPosition> {
         }
 
         // Get the position with high accuracy
-    navigator.geolocation.getCurrentPosition(
+        navigator.geolocation.getCurrentPosition(
           (position) => {
             console.log("Location obtained successfully:", {
               latitude: position.coords.latitude,
@@ -54,7 +102,7 @@ export function getCurrentPosition(): Promise<GeolocationPosition> {
             timeout: 10000, 
             maximumAge: 0 
           }
-    );
+        );
       })
       .catch(error => {
         console.error("Error checking geolocation permission:", error);

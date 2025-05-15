@@ -12,8 +12,8 @@ const clientDir = path.join(projectRoot, 'client');
 const postcssConfigPath = path.join(clientDir, 'postcss.config.js');
 const tailwindConfigPath = path.join(clientDir, 'tailwind.config.js');
 
-// Path to our backup tailwind config
-const backupTailwindConfigPath = path.join(__dirname, 'tailwind.config.js');
+// Path to our minimal vite config
+const minimalViteConfigPath = path.join(__dirname, 'vite.config.minimal.js');
 
 console.log('🔧 Preparing Render-compatible build configuration...');
 
@@ -24,9 +24,11 @@ if (isRender) {
   console.log('📋 Running on Render, creating compatible config...');
   
   try {
-    // Install required CSS dependencies
-    console.log('📦 Installing required CSS dependencies...');
-    execSync('npm install --no-save autoprefixer postcss tailwindcss @tailwindcss/typography', { stdio: 'inherit' });
+    // Install required CSS dependencies globally to ensure they're available
+    console.log('📦 Installing required CSS dependencies globally...');
+    execSync('npm install -g autoprefixer postcss tailwindcss @tailwindcss/typography', { stdio: 'inherit' });
+    console.log('📦 Installing required CSS dependencies locally...');
+    execSync('npm install --save-dev autoprefixer postcss tailwindcss @tailwindcss/typography', { stdio: 'inherit' });
     
     // Backup the original vite config if it exists
     if (fs.existsSync(viteConfigPath)) {
@@ -35,67 +37,48 @@ if (isRender) {
       console.log(`💾 Original vite config backed up to ${configBackupPath}`);
     }
     
-    // Create a simplified PostCSS config
-    console.log('🎨 Creating simplified PostCSS config...');
-    const postcssConfig = `module.exports = {
-  plugins: {
-    tailwindcss: {},
-    autoprefixer: {},
-  }
-}`;
-    
-    // Backup and update PostCSS config
+    // Remove all CSS config files to avoid loading errors
     if (fs.existsSync(postcssConfigPath)) {
       const postcssBackupPath = `${postcssConfigPath}.original`;
       fs.copyFileSync(postcssConfigPath, postcssBackupPath);
       console.log(`💾 Original PostCSS config backed up to ${postcssBackupPath}`);
+      
+      // Remove the file so Vite doesn't try to load it
+      fs.unlinkSync(postcssConfigPath);
+      console.log('🗑️ Removed external PostCSS config file');
     }
-    fs.writeFileSync(postcssConfigPath, postcssConfig);
-    console.log('✅ Render-compatible PostCSS config created successfully!');
     
-    // Copy our simplified tailwind config
-    console.log('🎨 Setting up Tailwind CSS configuration...');
     if (fs.existsSync(tailwindConfigPath)) {
       const tailwindBackupPath = `${tailwindConfigPath}.original`;
       fs.copyFileSync(tailwindConfigPath, tailwindBackupPath);
       console.log(`💾 Original Tailwind config backed up to ${tailwindBackupPath}`);
+      
+      // Remove the file
+      fs.unlinkSync(tailwindConfigPath);
+      console.log('🗑️ Removed Tailwind config file');
     }
-    if (fs.existsSync(backupTailwindConfigPath)) {
-      fs.copyFileSync(backupTailwindConfigPath, tailwindConfigPath);
-      console.log('✅ Render-compatible Tailwind config copied successfully!');
+
+    // Copy our minimal vite config to the main vite config path
+    if (fs.existsSync(minimalViteConfigPath)) {
+      fs.copyFileSync(minimalViteConfigPath, viteConfigPath);
+      console.log('✅ Minimal Vite config copied successfully!');
     } else {
-      // Create a basic tailwind config
-      const tailwindConfig = `/** @type {import('tailwindcss').Config} */
-module.exports = {
-  content: [
-    "./src/**/*.{js,jsx,ts,tsx}",
-    "./index.html",
-  ],
-  theme: {
-    extend: {},
-  },
-  plugins: [
-    require('@tailwindcss/typography'),
-  ],
-}`;
-      fs.writeFileSync(tailwindConfigPath, tailwindConfig);
-      console.log('✅ Render-compatible Tailwind config created successfully!');
-    }
-    
-    // Create a simplified vite config
-    const renderCompatibleConfig = `
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import path from "path";
-import { fileURLToPath } from "url";
+      // Create a minimal vite config with PostCSS disabled
+      const minimalConfig = `
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Simplified vite config for Render deployment
+// Most minimal configuration possible with no external dependencies
 export default defineConfig({
-  plugins: [
-    react(),
-  ],
+  plugins: [react()],
+  css: {
+    // Skip PostCSS processing entirely
+    postcss: false,
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "client", "src"),
@@ -109,10 +92,10 @@ export default defineConfig({
     emptyOutDir: true,
   },
 });`;
-    
-    // Write the new vite config
-    fs.writeFileSync(viteConfigPath, renderCompatibleConfig);
-    console.log('✅ Render-compatible vite config created successfully!');
+      
+      fs.writeFileSync(viteConfigPath, minimalConfig);
+      console.log('✅ Minimal Vite config created successfully!');
+    }
     
   } catch (error) {
     console.error('❌ Error preparing Render configuration:', error);

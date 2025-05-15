@@ -48,16 +48,31 @@ const analyzeProjectStructure = () => {
     }
   }
   
+  // Check for "type": "module" in package.json
+  const packageJsonPath = path.join(projectRoot, 'package.json');
+  let isESModule = false;
+  if (fs.existsSync(packageJsonPath)) {
+    try {
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+      isESModule = packageJson.type === 'module';
+      console.log(`📦 Package type: ${isESModule ? 'ES Module' : 'CommonJS'}`);
+    } catch (error) {
+      console.log('⚠️ Could not parse package.json');
+    }
+  }
+  
   return {
     indexHtmlPath,
-    originalConfig
+    originalConfig,
+    isESModule
   };
 };
 
 // Path to the config files
 const viteConfigPath = path.join(projectRoot, 'vite.config.ts');
 const clientDir = path.join(projectRoot, 'client');
-const postcssConfigPath = path.join(clientDir, 'postcss.config.js');
+const postcssConfigPath = path.join(projectRoot, 'postcss.config.js');
+const clientPostcssConfigPath = path.join(clientDir, 'postcss.config.js');
 const tailwindConfigPath = path.join(clientDir, 'tailwind.config.js');
 
 // Path to our minimal vite config
@@ -73,7 +88,7 @@ if (isRender) {
   
   try {
     // Analyze the project structure first
-    const { indexHtmlPath, originalConfig } = analyzeProjectStructure();
+    const { indexHtmlPath, originalConfig, isESModule } = analyzeProjectStructure();
     
     // Install required CSS dependencies globally to ensure they're available
     console.log('📦 Installing required CSS dependencies globally...');
@@ -89,14 +104,24 @@ if (isRender) {
     }
     
     // Remove all CSS config files to avoid loading errors
+    if (fs.existsSync(clientPostcssConfigPath)) {
+      const postcssBackupPath = `${clientPostcssConfigPath}.original`;
+      fs.copyFileSync(clientPostcssConfigPath, postcssBackupPath);
+      console.log(`💾 Original client PostCSS config backed up to ${postcssBackupPath}`);
+      
+      // Remove the file so Vite doesn't try to load it
+      fs.unlinkSync(clientPostcssConfigPath);
+      console.log('🗑️ Removed client PostCSS config file');
+    }
+    
     if (fs.existsSync(postcssConfigPath)) {
       const postcssBackupPath = `${postcssConfigPath}.original`;
       fs.copyFileSync(postcssConfigPath, postcssBackupPath);
-      console.log(`💾 Original PostCSS config backed up to ${postcssBackupPath}`);
+      console.log(`💾 Original root PostCSS config backed up to ${postcssBackupPath}`);
       
       // Remove the file so Vite doesn't try to load it
       fs.unlinkSync(postcssConfigPath);
-      console.log('🗑️ Removed external PostCSS config file');
+      console.log('🗑️ Removed root PostCSS config file');
     }
     
     if (fs.existsSync(tailwindConfigPath)) {
@@ -108,6 +133,19 @@ if (isRender) {
       fs.unlinkSync(tailwindConfigPath);
       console.log('🗑️ Removed Tailwind config file');
     }
+
+    // Create a postcss.config.cjs file that works with ES modules
+    console.log('📝 Creating ES module compatible PostCSS config...');
+    const postcssConfigCjs = path.join(projectRoot, 'postcss.config.cjs');
+    const postcssConfigContent = `// postcss.config.cjs - CommonJS format for compatibility
+module.exports = {
+  plugins: {
+    // Empty plugins to avoid dependency issues
+  }
+};
+`;
+    fs.writeFileSync(postcssConfigCjs, postcssConfigContent);
+    console.log('✅ Created PostCSS config in CommonJS format');
 
     // Create a minimal vite config with no CSS dependencies
     // Using information from our project structure analysis
@@ -125,6 +163,11 @@ export default defineConfig({
   css: {
     // Skip PostCSS processing entirely
     postcss: false,
+    // Disable CSS modules to avoid preprocessor errors
+    modules: {
+      localsConvention: 'camelCase',
+      generateScopedName: '[local]'
+    }
   },
   resolve: {
     alias: {

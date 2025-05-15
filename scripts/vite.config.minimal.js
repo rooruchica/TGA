@@ -19,6 +19,19 @@ export default defineConfig({
   css: {
     // Skip PostCSS processing entirely
     postcss: false,
+    // Disable CSS modules
+    modules: {
+      localsConvention: 'camelCase',
+      generateScopedName: '[local]'
+    },
+    // Skip preprocessors
+    preprocessorOptions: {
+      less: false,
+      sass: false,
+      scss: false,
+      styl: false,
+      stylus: false
+    }
   },
   resolve: {
     alias: {
@@ -29,6 +42,8 @@ export default defineConfig({
   },
   root: projectRoot, // Use project root instead of client dir
   build: {
+    // Skip CSS minification
+    cssMinify: false,
     outDir: path.resolve(projectRoot, "dist/public"),
     emptyOutDir: true,
   },

@@ -545,9 +545,9 @@ const GuideDashboard: React.FC = () => {
   }
 
   return (
-    <div className="h-full flex flex-col pb-14">
+    <div className="h-full flex flex-col pb-14 pt-16">
       {/* Header */}
-      <div className="p-4 border-b flex flex-col md:flex-row md:items-center gap-4 bg-white">
+      <div className="p-4 border-b flex flex-col md:flex-row md:items-center gap-4 bg-white fixed top-0 left-0 right-0 z-10">
         <div className="flex items-center gap-3 flex-1">
           <Avatar className="h-12 w-12">
             <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.username || 'guide'}`} />
@@ -567,7 +567,7 @@ const GuideDashboard: React.FC = () => {
       </div>
       
       {/* Dashboard Content */}
-      <div className="flex-1 overflow-y-auto p-4 pb-20 flex flex-col">
+      <div className="flex-1 overflow-y-auto p-4 pb-20 flex flex-col mt-16">
         {/* Guide Stats */}
         <GuideStats stats={stats} isLoading={isLoadingStats} />
         

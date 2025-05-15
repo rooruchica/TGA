@@ -324,9 +324,9 @@ const Dashboard: React.FC = () => {
   }, [currentPosition]);
   
   return (
-    <div className="h-full flex flex-col pb-14">
+    <div className="h-full flex flex-col pb-14 pt-16">
       {/* Header */}
-      <div className="relative z-10 bg-white shadow-md">
+      <div className="relative z-10 bg-white shadow-md fixed top-0 left-0 right-0">
         <div className="flex items-center p-3 bg-white">
           <button className="p-2">
             <svg
@@ -370,7 +370,7 @@ const Dashboard: React.FC = () => {
       </div>
       
       {/* Map View */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative mt-16">
         <MapView
           center={mapCenter}
           zoom={currentPosition ? 15 : 12}

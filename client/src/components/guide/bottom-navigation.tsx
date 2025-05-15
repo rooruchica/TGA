@@ -119,7 +119,7 @@ const GuideBottomNavigation = () => {
   const isActive = (path: string) => location === path;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 bg-white border-t border-gray-200 flex justify-around py-2 z-30 bottom-navigation">
+    <div className="fixed inset-x-0 bottom-0 bg-white border-t border-gray-200 flex justify-around py-2 z-50 bottom-navigation">
       {navItems.map((item) => (
         <button
           key={item.name}

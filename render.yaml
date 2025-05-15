@@ -2,7 +2,7 @@ services:
   - type: web
     name: maharashtra-tour-guide-backend
     env: node
-    buildCommand: yarn && yarn build
+    buildCommand: npm install && npm run build
     startCommand: NODE_ENV=production node dist/index.js
     plan: free
     envVars:

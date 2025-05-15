@@ -59,9 +59,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add right after the existing middleware but before route definitions
   app.use((req, res, next) => {
     // Set CORS headers
-    res.header('Access-Control-Allow-Origin', '*');
+    const origin = req.headers.origin || '';
+    // Allow requests from any origin in development, or from the deployed domain in production
+    res.header('Access-Control-Allow-Origin', process.env.NODE_ENV === 'production' ? req.headers.origin : '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control');
+    res.header('Access-Control-Allow-Credentials', 'true');
     
     // Handle preflight requests
     if (req.method === 'OPTIONS') {

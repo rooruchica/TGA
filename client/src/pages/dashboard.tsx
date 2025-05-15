@@ -49,11 +49,14 @@ const Dashboard: React.FC = () => {
     queryKey: ['/api/guides/locations'],
     queryFn: async () => {
       try {
-        const response = await fetchApi<UserLocation[]>('/api/guides/locations');
+        console.log('Fetching guide locations...');
+        // Make sure we're using the full URL path
+        const response = await fetchApi<UserLocation[]>('/api/locations/guides');
+        console.log('Guide locations response:', response);
         return response;
       } catch (error) {
         console.error("Failed to fetch guide locations", error);
-        // Return mock data for now
+        // Return mock data as fallback
         return [
           {
             userId: "guide1",
@@ -84,11 +87,14 @@ const Dashboard: React.FC = () => {
     queryKey: ['/api/tourists/locations'],
     queryFn: async () => {
       try {
-        const response = await fetchApi<UserLocation[]>('/api/tourists/locations');
+        console.log('Fetching tourist locations...');
+        // Make sure we're using the full URL path
+        const response = await fetchApi<UserLocation[]>('/api/locations/tourists');
+        console.log('Tourist locations response:', response);
         return response;
       } catch (error) {
         console.error("Failed to fetch tourist locations", error);
-        // Return mock data for now
+        // Return mock data as fallback
         return [
           {
             userId: "tourist1",

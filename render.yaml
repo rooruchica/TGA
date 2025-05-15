@@ -1,20 +1,13 @@
 services:
   - type: web
-    name: maharashtra-tour-guide-backend
+    name: maharashtratourguide
     env: node
-    buildCommand: |
-      npm install
-      npm install -g autoprefixer postcss tailwindcss @tailwindcss/typography
-      npm install -D autoprefixer postcss tailwindcss @tailwindcss/typography
-      cp scripts/vite.direct.js vite.config.js
-      npx vite build --config vite.config.js
-      npx esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+    buildCommand: npm i && npm run render-build
     startCommand: NODE_ENV=production node dist/index.js
-    plan: free
     envVars:
       - key: MONGODB_URI
         sync: false # This will need to be manually set in the Render dashboard
       - key: NODE_ENV
         value: production
       - key: RENDER
-        value: 'true' 
+        value: true 

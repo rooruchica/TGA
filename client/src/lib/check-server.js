@@ -9,7 +9,9 @@ export async function checkBackendServer() {
   const startTime = Date.now();
   
   try {
-    const response = await fetch(`${API_BASE_URL}/api/test/mongodb`, {
+    // Use a relative URL in production, or API_BASE_URL in development
+    const apiUrl = import.meta.env.PROD ? '/api/test/mongodb' : `${API_BASE_URL}/api/test/mongodb`;
+    const response = await fetch(apiUrl, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       // Increased timeout to 5 seconds for slower connections

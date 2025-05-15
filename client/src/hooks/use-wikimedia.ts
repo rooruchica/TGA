@@ -96,7 +96,7 @@ export function useWikimedia(places: Place[], options: UseWikimediaOptions = {})
 
               // Optionally update the database
               if (options.updateDatabase && place.id) {
-                await fetch(`${API_BASE_URL}/api/places/${place.id}/wikimedia`, {
+                await fetch(`/api/places/${place.id}/wikimedia`, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',

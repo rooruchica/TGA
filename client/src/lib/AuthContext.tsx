@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { getApiUrl } from './api-client';
 
 // Define a base user type
 type BaseUser = {
@@ -110,8 +111,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setIsLoading(true);
     
     try {
+      // Use the getApiUrl function to ensure proper backend URL
+      const loginUrl = getApiUrl('/api/auth/login');
+      console.log("Using login URL:", loginUrl);
+      
       // Make a real API request to the backend
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(loginUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

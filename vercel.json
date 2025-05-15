@@ -3,7 +3,10 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist/public",
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { 
+      "src": "/api/(.*)", 
+      "dest": "https://tga-8py8.onrender.com/api/$1" 
+    },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ],
@@ -12,5 +15,9 @@
       "memory": 1024,
       "maxDuration": 10
     }
+  },
+  "env": {
+    "NODE_ENV": "production",
+    "BACKEND_URL": "https://tga-8py8.onrender.com"
   }
 } 

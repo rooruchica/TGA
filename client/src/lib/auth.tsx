@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { getApiUrl } from './api-client';
 
 // Define a base user type if we can't import from schema
 type BaseUser = {
@@ -62,8 +63,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setIsLoading(true);
       
+      // Use fetch with the full API URL
+      const loginUrl = getApiUrl('/api/auth/login');
+      console.log('Using login URL:', loginUrl);
+      
       // Use fetch directly since we need to check the response status and read the body
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch(loginUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),

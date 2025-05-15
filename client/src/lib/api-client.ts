@@ -1,17 +1,24 @@
 // API configuration for the application
-// In production, we use a relative URL to ensure it works correctly when deployed
+// In production, we use the BACKEND_URL from env, falling back to relative URL to ensure it works correctly when deployed
 // In development, we use localhost:5000
 export const API_BASE_URL = import.meta.env.PROD 
-  ? '' // Empty string for relative URLs in production
+  ? (import.meta.env.VITE_BACKEND_URL || 'https://tga-8py8.onrender.com') // Use Render URL in production
   : 'http://localhost:5000';
 
 /**
- * Creates a full API URL by appending the path to the base URL
- * @param path - The API path, should start with a slash
- * @returns The complete API URL
+ * Returns the full API URL for a given path
+ * @param path - The API path
+ * @returns The full API URL
  */
 export function getApiUrl(path: string): string {
-  return `${API_BASE_URL}${path}`;
+  // If path already starts with http or https, return it as is
+  if (path.startsWith('http')) {
+    return path;
+  }
+
+  // Ensure path starts with a slash
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${API_BASE_URL}${normalizedPath}`;
 }
 
 /**

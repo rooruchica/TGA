@@ -1,7 +1,7 @@
 // API client for making fetch requests with consistent error handling
 
-// Base URL for API requests - use relative path in production
-export const API_BASE_URL = import.meta.env.PROD ? '' : 'http://localhost:10000';
+// Base URL for API requests - use the deployed backend for all environments
+export const API_BASE_URL = 'https://tga-8py8.onrender.com';
 
 /**
  * Returns the full API URL for a given path

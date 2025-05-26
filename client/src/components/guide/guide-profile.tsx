@@ -59,7 +59,7 @@ const GuideProfile: React.FC = () => {
       <div className="p-4 border-b flex justify-between items-center">
         <h2 className="text-2xl font-bold">Guide Profile</h2>
         <div className="flex items-center">
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-1">
+          <Badge variant="outline" className="bg-red-50 text-blue-700 border-blue-200 flex items-center gap-1">
             <CheckCircle2 className="h-3.5 w-3.5" />
             Preview Mode
           </Badge>
@@ -75,11 +75,11 @@ const GuideProfile: React.FC = () => {
               <div className="relative mb-4">
                 <Avatar className="h-24 w-24 border-4 border-white shadow-lg">
                   <AvatarImage 
-                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.username || 'guide'}`} 
+                    src={currentUser?.profilePicture || "https://api.dicebear.com/9.x/notionists/svg?seed=Adrian"} 
                     alt={currentUser?.name || "Guide"} 
-                    className="bg-blue-50"
+                    className="bg-red-50"
                   />
-                  <AvatarFallback className="bg-blue-100 text-blue-700 text-2xl">
+                  <AvatarFallback className="bg-red-100 text-blue-700 text-2xl">
                     {currentUser?.name?.[0] || 'G'}
                   </AvatarFallback>
                 </Avatar>
@@ -137,7 +137,7 @@ const GuideProfile: React.FC = () => {
               <h4 className="font-semibold mb-2 text-gray-700">Specialties</h4>
               <div className="flex flex-wrap gap-2">
                 {(profile?.specialties || ["Historical Tours", "Cultural Experiences", "Adventure Tours"]).map((specialty, i) => (
-                  <Badge key={i} variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
+                  <Badge key={i} variant="secondary" className="bg-red-50 text-blue-700 hover:bg-red-100">
                     {specialty}
                   </Badge>
                 ))}
@@ -162,7 +162,7 @@ const GuideProfile: React.FC = () => {
               <div className="bg-white border rounded-lg p-4 flex items-center">
                 <Avatar className="h-16 w-16 mr-4">
                   <AvatarImage 
-                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.username || 'guide'}`} 
+                    src={currentUser?.profilePicture || "https://api.dicebear.com/9.x/notionists/svg?seed=Adrian"} 
                     alt={currentUser?.name || "Guide"} 
                   />
                   <AvatarFallback>{currentUser?.name?.[0] || 'G'}</AvatarFallback>

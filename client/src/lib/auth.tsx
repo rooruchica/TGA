@@ -108,10 +108,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
+
+
   // Logout function
   function logout() {
     setUser(null);
     localStorage.removeItem("user");
+    localStorage.removeItem("authToken");
   }
 
   // Create the context value
@@ -119,7 +122,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user,
     login,
     logout,
-    isLoading
+    isLoading,
   };
 
   return (

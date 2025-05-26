@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import fixLeafletMapErrors from "@/lib/leaflet-fix";
 import { Loader2, RefreshCcw } from "lucide-react";
 import { fetchApi, API_BASE_URL } from "@/lib/api-client";
 
@@ -333,31 +332,6 @@ const Connections: React.FC = () => {
     if (!user) return "Unknown";
     return user.userType === 'guide' ? 'Guide' : 'Tourist';
   };
-
-  // Add useEffect to handle map errors
-  useEffect(() => {
-    // Apply Leaflet fixes only once when component mounts
-    fixLeafletMapErrors();
-    
-    // Set up event listeners for tab changes
-    const handleTabChange = () => {
-      // Small delay to ensure DOM is updated
-      setTimeout(fixLeafletMapErrors, 100);
-    };
-    
-    // Listen to tab change events
-    const tabs = document.querySelectorAll('[role="tab"]');
-    tabs.forEach(tab => {
-      tab.addEventListener('click', handleTabChange);
-    });
-    
-    return () => {
-      // Clean up listeners
-      tabs.forEach(tab => {
-        tab.removeEventListener('click', handleTabChange);
-      });
-    };
-  }, []); // Empty dependency array to only run once on mount
 
   // Helper function to get guide profile from connection
   const getGuideProfile = (connection: Connection, otherUser?: User): GuideProfile | undefined => {
@@ -870,7 +844,7 @@ const Connections: React.FC = () => {
                             </div>
                             
                             {otherParty?.userType === 'guide' && guideProfile && (
-                              <div className="grid grid-cols-2 gap-3 mb-3 text-sm bg-blue-50 p-3 rounded-md">
+                              <div className="grid grid-cols-2 gap-3 mb-3 text-sm bg-red-50 p-3 rounded-md">
                                 <div>
                                   <p className="text-gray-600">Location</p>
                                   <p className="font-medium">{guideProfile.location || 'Not specified'}</p>
@@ -907,7 +881,7 @@ const Connections: React.FC = () => {
                                   <p className="text-gray-600">Specialties</p>
                                   <div className="flex flex-wrap gap-1 mt-1">
                                     {guideProfile.specialties?.map((specialty, i) => (
-                                      <span key={i} className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs">
+                                      <span key={i} className="bg-red-100 text-blue-800 px-2 py-0.5 rounded-full text-xs">
                                         {specialty}
                                       </span>
                                     )) || 'None specified'}
@@ -968,7 +942,7 @@ const Connections: React.FC = () => {
                                 Call
                               </Button>
                               <Button 
-                                className="text-sm bg-blue-600 hover:bg-blue-700"
+                                className="text-sm bg-red-600 hover:bg-red-700"
                                 onClick={() => handleMessage(connection)}
                               >
                                 <svg
@@ -1053,7 +1027,7 @@ const Connections: React.FC = () => {
                             </div>
                             
                             {otherParty?.userType === 'guide' && guideProfile && (
-                              <div className="grid grid-cols-2 gap-3 mb-3 text-sm bg-blue-50 p-3 rounded-md">
+                              <div className="grid grid-cols-2 gap-3 mb-3 text-sm bg-red-50 p-3 rounded-md">
                                 <div>
                                   <p className="text-gray-600">Location</p>
                                   <p className="font-medium">{guideProfile.location || 'Not specified'}</p>
@@ -1090,7 +1064,7 @@ const Connections: React.FC = () => {
                                   <p className="text-gray-600">Specialties</p>
                                   <div className="flex flex-wrap gap-1 mt-1">
                                     {guideProfile.specialties?.map((specialty, i) => (
-                                      <span key={i} className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs">
+                                      <span key={i} className="bg-red-100 text-blue-800 px-2 py-0.5 rounded-full text-xs">
                                         {specialty}
                                       </span>
                                     )) || 'None specified'}

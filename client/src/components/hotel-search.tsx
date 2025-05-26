@@ -533,7 +533,7 @@ const HotelSearch: React.FC<HotelSearchProps> = ({ onSelectHotel }) => {
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="text-lg font-medium">{hotel.HotelName}</h4>
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded font-medium">
+                    <span className="px-2 py-1 bg-red-100 text-blue-800 text-xs rounded font-medium">
                       {hotel.Category}
                     </span>
                   </div>

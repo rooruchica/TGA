@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { LogOut, Mail, Phone, MapPin, Star, Languages, Medal, Clock, Users, Edit, Eye, Briefcase, MessageCircle, Loader } from "lucide-react";
+import GuideBottomNavigation from "@/components/guide/bottom-navigation";
 
 // Define user interface based on auth context
 interface User {
@@ -26,6 +27,7 @@ interface User {
   role: string;
   isGuide: boolean;
   fullName?: string; // Added to fix type errors
+  profilePicture?: string;
 }
 
 interface GuideProfile {
@@ -80,10 +82,10 @@ const LiveLocationMap = ({ position }: { position: { lat: number, lng: number } 
       // Initialize the map
       const map = L.map(mapRef.current).setView([position.lat, position.lng], 13);
       
-      // Add the OpenStreetMap tiles
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      // Add the GoMaps Pro tiles
+      L.tileLayer('https://api.gomaps.com/v1/tiles/{z}/{x}/{y}?key=AlzaSy-46TtDNSlbH9ACjPvoMt82OoCXT-ALi7G', {
         maxZoom: 19,
-        attribution: '© OpenStreetMap contributors'
+        attribution: '&copy; <a href="https://gomaps.com">GoMaps Pro</a> contributors'
       }).addTo(map);
       
       // Add a marker for the current position
@@ -364,7 +366,7 @@ const GuideProfile = () => {
 
   if (authLoading || isLoading) {
     return (
-      <Layout>
+      <Layout forceGuide>
         <div className="h-full flex items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
         </div>
@@ -384,7 +386,7 @@ const GuideProfile = () => {
           <div className="flex flex-col md:flex-row gap-6">
             <div className="flex flex-col items-center">
               <Avatar className="h-32 w-32 mb-3">
-                <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || 'default'}`} />
+                <AvatarImage src={user?.profilePicture || "https://api.dicebear.com/9.x/notionists/svg?seed=Adrian"} />
                 <AvatarFallback>{user?.name?.[0] || user?.username?.[0] || '?'}</AvatarFallback>
               </Avatar>
               <div className="flex items-center mb-1">
@@ -478,241 +480,244 @@ const GuideProfile = () => {
   );
 
   return (
-    <Layout>
-      <div className="h-full flex flex-col pb-14">
-        {/* Header */}
-        <div className="p-4 border-b flex justify-between items-center">
-          <h2 className="text-2xl font-bold">Guide Profile</h2>
-          <div className="flex items-center space-x-2">
-            <Switch 
-              id="preview-mode" 
-              checked={previewMode}
-              onCheckedChange={setPreviewMode}
-            />
-            <Label htmlFor="preview-mode">
-              {previewMode ? (
-                <div className="flex items-center">
-                  <Eye className="w-4 h-4 mr-1" />
-                  Preview Mode
-                </div>
-              ) : (
-                <div className="flex items-center">
-                  <Edit className="w-4 h-4 mr-1" />
-                  Edit Mode
-                </div>
-              )}
-            </Label>
-          </div>
-        </div>
-
-        {/* Profile Content */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {/* User Info Card */}
-          <Card className="mb-6">
-            <div className="p-4">
-              <div className="flex flex-col md:flex-row md:items-center gap-4">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || 'default'}`} />
-                  <AvatarFallback>{user?.name?.[0] || user?.username?.[0] || '?'}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold">{user?.name || user?.username}</h3>
-                  <p className="text-sm text-gray-500">@{user?.username}</p>
-                  <div className="flex items-center mt-1 text-sm text-gray-600">
-                    <Mail className="w-4 h-4 mr-1" />
-                    {user?.email}
+    <>
+      <Layout forceGuide>
+        <div className="h-full flex flex-col pb-14">
+          {/* Header */}
+          <div className="p-4 border-b flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Guide Profile</h2>
+            <div className="flex items-center space-x-2">
+              <Switch 
+                id="preview-mode" 
+                checked={previewMode}
+                onCheckedChange={setPreviewMode}
+              />
+              <Label htmlFor="preview-mode">
+                {previewMode ? (
+                  <div className="flex items-center">
+                    <Eye className="w-4 h-4 mr-1" />
+                    Preview Mode
                   </div>
-                  {user?.phone && (
+                ) : (
+                  <div className="flex items-center">
+                    <Edit className="w-4 h-4 mr-1" />
+                    Edit Mode
+                  </div>
+                )}
+              </Label>
+            </div>
+          </div>
+
+          {/* Profile Content */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {/* User Info Card */}
+            <Card className="mb-6">
+              <div className="p-4">
+                <div className="flex flex-col md:flex-row md:items-center gap-4">
+                  <Avatar className="h-20 w-20">
+                    <AvatarImage src={user?.profilePicture || "https://api.dicebear.com/9.x/notionists/svg?seed=Adrian"} />
+                    <AvatarFallback>{user?.name?.[0] || user?.username?.[0] || '?'}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold">{user?.name || user?.username}</h3>
+                    <p className="text-sm text-gray-500">@{user?.username}</p>
                     <div className="flex items-center mt-1 text-sm text-gray-600">
-                      <Phone className="w-4 h-4 mr-1" />
-                      {user.phone}
+                      <Mail className="w-4 h-4 mr-1" />
+                      {user?.email}
+                    </div>
+                    {user?.phone && (
+                      <div className="flex items-center mt-1 text-sm text-gray-600">
+                        <Phone className="w-4 h-4 mr-1" />
+                        {user.phone}
+                      </div>
+                    )}
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 md:self-start"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Logout
+                  </Button>
+                </div>
+              </div>
+            </Card>
+
+            {/* Stats Overview */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <Card>
+                <CardContent className="p-4 flex flex-col items-center">
+                  <Users className="h-8 w-8 text-blue-500 mb-2" />
+                  <p className="text-lg font-bold">{stats?.totalConnections || 0}</p>
+                  <p className="text-xs text-gray-500">Tourist Connections</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 flex flex-col items-center">
+                  <MessageCircle className="h-8 w-8 text-yellow-500 mb-2" />
+                  <p className="text-lg font-bold">{stats?.pendingRequests || 0}</p>
+                  <p className="text-xs text-gray-500">Pending Requests</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 flex flex-col items-center">
+                  <Clock className="h-8 w-8 text-green-500 mb-2" />
+                  <p className="text-lg font-bold">{stats?.upcomingTours || 0}</p>
+                  <p className="text-xs text-gray-500">Upcoming Tours</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 flex flex-col items-center">
+                  <Medal className="h-8 w-8 text-purple-500 mb-2" />
+                  <p className="text-lg font-bold">{stats?.completedTours || 0}</p>
+                  <p className="text-xs text-gray-500">Completed Tours</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {previewMode ? (
+              <ProfileViewer />
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Location */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Location
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={formData.location}
+                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                      placeholder="Enter your location"
+                      className="flex-1"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={locationUpdateInterval ? stopLiveLocationTracking : startLiveLocationTracking}
+                      disabled={locationLoading}
+                      className={`whitespace-nowrap ${locationUpdateInterval ? 'bg-red-50 text-red-600 hover:bg-red-100' : ''}`}
+                    >
+                      {locationLoading ? (
+                        <div className="flex items-center">
+                          <Loader className="w-4 h-4 mr-2 animate-spin" />
+                          Loading...
+                        </div>
+                      ) : locationUpdateInterval ? (
+                        <div className="flex items-center">
+                          <span className="mr-1 w-2 h-2 bg-red-500 inline-block rounded-full"></span>
+                          Stop Live Tracking
+                        </div>
+                      ) : (
+                        <div className="flex items-center">
+                          <MapPin className="w-4 h-4 mr-2" />
+                          Start Live Tracking
+                        </div>
+                      )}
+                    </Button>
+                  </div>
+                  
+                  {/* Live Location Map */}
+                  {currentPosition && (
+                    <div className="mt-3">
+                      <div className="mb-2 text-sm flex items-center">
+                        <MapPin className="w-3 h-3 mr-1 text-gray-600" />
+                        <span className="text-gray-700">
+                          Current coordinates: {currentPosition.lat.toFixed(6)}, {currentPosition.lng.toFixed(6)}
+                        </span>
+                        {locationUpdateInterval && (
+                          <Badge variant="outline" className="ml-2 bg-green-100 border-green-300 text-green-800">
+                            <span className="mr-1 w-2 h-2 bg-green-500 inline-block rounded-full animate-pulse"></span>
+                            Live
+                          </Badge>
+                        )}
+                      </div>
+                      <LiveLocationMap position={currentPosition} />
                     </div>
                   )}
                 </div>
-                <Button 
-                  variant="outline" 
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50 md:self-start"
-                  onClick={handleLogout}
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
-                </Button>
-              </div>
-            </div>
-          </Card>
 
-          {/* Stats Overview */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <Card>
-              <CardContent className="p-4 flex flex-col items-center">
-                <Users className="h-8 w-8 text-blue-500 mb-2" />
-                <p className="text-lg font-bold">{stats?.totalConnections || 0}</p>
-                <p className="text-xs text-gray-500">Tourist Connections</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 flex flex-col items-center">
-                <MessageCircle className="h-8 w-8 text-yellow-500 mb-2" />
-                <p className="text-lg font-bold">{stats?.pendingRequests || 0}</p>
-                <p className="text-xs text-gray-500">Pending Requests</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 flex flex-col items-center">
-                <Clock className="h-8 w-8 text-green-500 mb-2" />
-                <p className="text-lg font-bold">{stats?.upcomingTours || 0}</p>
-                <p className="text-xs text-gray-500">Upcoming Tours</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 flex flex-col items-center">
-                <Medal className="h-8 w-8 text-purple-500 mb-2" />
-                <p className="text-lg font-bold">{stats?.completedTours || 0}</p>
-                <p className="text-xs text-gray-500">Completed Tours</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {previewMode ? (
-            <ProfileViewer />
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Location */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Location
-                </label>
-                <div className="flex gap-2">
+                {/* Experience */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Years of Experience
+                  </label>
                   <Input
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    placeholder="Enter your location"
-                    className="flex-1"
+                    type="number"
+                    value={formData.experience}
+                    onChange={(e) => setFormData({ ...formData, experience: parseInt(e.target.value) })}
+                    placeholder="Enter years of experience"
                   />
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={locationUpdateInterval ? stopLiveLocationTracking : startLiveLocationTracking}
-                    disabled={locationLoading}
-                    className={`whitespace-nowrap ${locationUpdateInterval ? 'bg-red-50 text-red-600 hover:bg-red-100' : ''}`}
-                  >
-                    {locationLoading ? (
-                      <div className="flex items-center">
-                        <Loader className="w-4 h-4 mr-2 animate-spin" />
-                        Loading...
-                      </div>
-                    ) : locationUpdateInterval ? (
-                      <div className="flex items-center">
-                        <span className="mr-1 w-2 h-2 bg-red-500 inline-block rounded-full"></span>
-                        Stop Live Tracking
-                      </div>
-                    ) : (
-                      <div className="flex items-center">
-                        <MapPin className="w-4 h-4 mr-2" />
-                        Start Live Tracking
-                      </div>
-                    )}
-                  </Button>
                 </div>
-                
-                {/* Live Location Map */}
-                {currentPosition && (
-                  <div className="mt-3">
-                    <div className="mb-2 text-sm flex items-center">
-                      <MapPin className="w-3 h-3 mr-1 text-gray-600" />
-                      <span className="text-gray-700">
-                        Current coordinates: {currentPosition.lat.toFixed(6)}, {currentPosition.lng.toFixed(6)}
-                      </span>
-                      {locationUpdateInterval && (
-                        <Badge variant="outline" className="ml-2 bg-green-100 border-green-300 text-green-800">
-                          <span className="mr-1 w-2 h-2 bg-green-500 inline-block rounded-full animate-pulse"></span>
-                          Live
-                        </Badge>
-                      )}
-                    </div>
-                    <LiveLocationMap position={currentPosition} />
+
+                {/* Specialties */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Specialties (comma-separated)
+                  </label>
+                  <Input
+                    value={formData.specialties.join(", ")}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      specialties: e.target.value.split(",").map(s => s.trim()).filter(Boolean)
+                    })}
+                    placeholder="e.g., Historical Tours, Adventure Tours, Cultural Tours"
+                  />
+                  <div className="mt-2 text-sm text-gray-500">
+                    Add the types of tours and experiences you specialize in
                   </div>
-                )}
-              </div>
-
-              {/* Experience */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Years of Experience
-                </label>
-                <Input
-                  type="number"
-                  value={formData.experience}
-                  onChange={(e) => setFormData({ ...formData, experience: parseInt(e.target.value) })}
-                  placeholder="Enter years of experience"
-                />
-              </div>
-
-              {/* Specialties */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Specialties (comma-separated)
-                </label>
-                <Input
-                  value={formData.specialties.join(", ")}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    specialties: e.target.value.split(",").map(s => s.trim()).filter(Boolean)
-                  })}
-                  placeholder="e.g., Historical Tours, Adventure Tours, Cultural Tours"
-                />
-                <div className="mt-2 text-sm text-gray-500">
-                  Add the types of tours and experiences you specialize in
                 </div>
-              </div>
 
-              {/* Languages */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Languages (comma-separated)
-                </label>
-                <Input
-                  value={formData.languages.join(", ")}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    languages: e.target.value.split(",").map(s => s.trim()).filter(Boolean)
-                  })}
-                  placeholder="e.g., English, Hindi, Marathi"
-                />
-                <div className="mt-2 text-sm text-gray-500">
-                  List languages you speak fluently with tourists
+                {/* Languages */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Languages (comma-separated)
+                  </label>
+                  <Input
+                    value={formData.languages.join(", ")}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      languages: e.target.value.split(",").map(s => s.trim()).filter(Boolean)
+                    })}
+                    placeholder="e.g., English, Hindi, Marathi"
+                  />
+                  <div className="mt-2 text-sm text-gray-500">
+                    List languages you speak fluently with tourists
+                  </div>
                 </div>
-              </div>
 
-              {/* Bio */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bio
-                </label>
-                <Textarea
-                  value={formData.bio}
-                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                  placeholder="Tell tourists about yourself, your background, experience, and what makes your tours special..."
-                  rows={6}
-                />
-                <div className="mt-2 text-sm text-gray-500">
-                  Write a compelling bio to attract tourists (500 characters max)
+                {/* Bio */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Bio
+                  </label>
+                  <Textarea
+                    value={formData.bio}
+                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                    placeholder="Tell tourists about yourself, your background, experience, and what makes your tours special..."
+                    rows={6}
+                  />
+                  <div className="mt-2 text-sm text-gray-500">
+                    Write a compelling bio to attract tourists (500 characters max)
+                  </div>
                 </div>
-              </div>
 
-              {/* Submit Button */}
-              <Button 
-                type="submit" 
-                className="w-full"
-                disabled={updateProfile.isPending}
-              >
-                {updateProfile.isPending ? "Updating..." : "Update Profile"}
-              </Button>
-            </form>
-          )}
+                {/* Submit Button */}
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={updateProfile.isPending}
+                >
+                  {updateProfile.isPending ? "Updating..." : "Update Profile"}
+                </Button>
+              </form>
+            )}
+          </div>
         </div>
-      </div>
-    </Layout>
+      </Layout>
+      <GuideBottomNavigation />
+    </>
   );
 };
 

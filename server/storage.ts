@@ -61,7 +61,7 @@ export class MongoStorage implements IStorage {
       { $set: updateData },
       { returnDocument: 'after' }
     );
-    if (!result.value) return undefined;
+    if (!result?.value) return undefined;
     const { _id, ...rest } = result.value;
     return { ...rest, id: _id.toString() } as User;
   }
@@ -87,7 +87,7 @@ export class MongoStorage implements IStorage {
       { $set: updateData },
       { returnDocument: 'after' }
     );
-    if (!result.value) return undefined;
+    if (!result?.value) return undefined;
     const { _id, ...rest } = result.value;
     return { ...rest, id: _id.toString() } as GuideProfile;
   }
@@ -158,7 +158,7 @@ export class MongoStorage implements IStorage {
   }
   
   // Connection methods
-  async getConnections(userId: string | number): Promise<Connection[]> {
+  async getConnections(userId: string | number, status?: string): Promise<Connection[]> {
     console.log("[storage] Getting connections for user:", userId, "Type:", typeof userId);
     
     // Convert userId to string for consistent comparison
@@ -180,12 +180,16 @@ export class MongoStorage implements IStorage {
     }
     
     // Super simple query - just string comparison
-    const query = {
+    const query: any = {
       $or: [
         { fromUserId: userIdStr }, 
         { toUserId: userIdStr }
       ]
     };
+
+    if (status) {
+      query.status = status;
+    }
     
     console.log("[storage] Using simplified connection query:", JSON.stringify(query));
     
@@ -246,10 +250,31 @@ export class MongoStorage implements IStorage {
         throw new Error('Failed to create connection - no insertedId returned');
       }
       
-      const insertedConnection = { 
-        ...normalizedConnection, 
-        id: result.insertedId.toString() 
-      } as Connection;
+      // Ensure createdAt is a Date object for the final Connection type
+      let finalCreatedAt: Date | undefined = undefined;
+      if (normalizedConnection.createdAt) { // normalizedConnection.createdAt is Date | string
+        finalCreatedAt = typeof normalizedConnection.createdAt === 'string' 
+          ? new Date(normalizedConnection.createdAt) 
+          : normalizedConnection.createdAt;
+      }
+
+      const insertedConnection: Connection = {
+        id: result.insertedId.toString(),
+        fromUserId: normalizedConnection.fromUserId,
+        toUserId: normalizedConnection.toUserId,
+        status: normalizedConnection.status,
+        message: normalizedConnection.message,
+        tripDetails: normalizedConnection.tripDetails,
+        // fromUser, toUser, guideProfile are not part of the document inserted here;
+        // they are optional in Connection type and typically populated on read.
+      };
+
+      if (normalizedConnection.budget !== undefined) {
+        insertedConnection.budget = normalizedConnection.budget;
+      }
+      if (finalCreatedAt !== undefined) {
+        insertedConnection.createdAt = finalCreatedAt;
+      }
       
       console.log("[DEBUG] Connection successfully created:", insertedConnection);
       return insertedConnection;
@@ -345,24 +370,7 @@ export class MongoStorage implements IStorage {
         }
       }
       
-      // 2. If no result, try with string ID instead of numeric ID
-      if (!connection && typeof id === 'string' && !isNaN(Number(id))) {
-        try {
-          console.log("[storage] Trying with string ID that looks numeric:", id);
-          // Do not convert to Number - this can cause ObjectId type issues
-          const result = await db.collection('connections').findOneAndUpdate(
-            { _id: id },
-            { $set: { status, updatedAt: new Date().toISOString() } },
-            { returnDocument: 'after' }
-          );
-          if (result && result.value) {
-            console.log("[storage] Found and updated connection with string ID");
-            connection = result.value;
-          }
-        } catch (error) {
-          console.log("[storage] String ID approach failed:", error);
-        }
-      }
+
       
       // 3. If still no result, try direct ID match (string comparison)
       if (!connection) {
@@ -549,29 +557,35 @@ export class MongoStorage implements IStorage {
 
   async createMessage(message: any): Promise<any> {
     try {
-      console.log("[storage] Creating new message:", {
-        connectionId: message.connectionId,
-        sender: message.senderId,
-        recipient: message.recipientId,
-        contentLength: message.content.length
-      });
-      
-      // Insert the message
       const result = await db.collection('messages').insertOne(message);
-      
-      if (!result.insertedId) {
-        throw new Error("Failed to insert message");
-      }
-      
-      // Return the created message with the ID
-      const createdMessage = { ...message, id: result.insertedId.toString() };
-      console.log("[storage] Message created successfully with ID:", createdMessage.id);
-      
-      return createdMessage;
+      if (!result.insertedId) throw new Error('Failed to create message');
+      return { ...message, id: result.insertedId.toString() };
     } catch (error) {
-      console.error("[storage] Error creating message:", error);
+      console.error("Error creating message:", error);
       throw error;
     }
+  }
+  
+  // Authentication methods
+  generateToken(userId: string): string {
+    // Simple token generation for demonstration
+    // In a production app, you would use a proper JWT library
+    const timestamp = Date.now();
+    const randomPart = Math.random().toString(36).substring(2, 15);
+    return `${userId}_${timestamp}_${randomPart}`;
+  }
+
+  // Add this method to update an itinerary by ID
+  async updateItinerary(id: string, update: Partial<Itinerary>): Promise<Itinerary | undefined> {
+    const { id: _, ...updateData } = update;
+    const result = await db.collection('itineraries').findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: updateData },
+      { returnDocument: 'after' }
+    );
+    if (!result?.value) return undefined;
+    const { _id, ...rest } = result.value;
+    return { ...rest, id: _id.toString() } as Itinerary;
   }
 }
 

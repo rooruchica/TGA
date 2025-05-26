@@ -21,11 +21,17 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, onClick, isActive }) => 
   </button>
 );
 
-const Navbar = () => {
+interface NavbarProps {
+  forceGuide?: boolean;
+}
+
+const Navbar: React.FC<NavbarProps> = ({ forceGuide }) => {
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
 
   const isActive = (path: string) => location === path;
+
+  const isGuide = forceGuide || (user && user.userType === "guide");
 
   return (
     <nav className="bg-white border-b">
@@ -34,7 +40,7 @@ const Navbar = () => {
           <div className="flex items-center space-x-4">
             {user && (
               <>
-                {user.userType === "guide" ? (
+                {isGuide ? (
                   <>
                     <NavItem
                       icon={<Home className="h-5 w-5" />}

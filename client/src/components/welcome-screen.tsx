@@ -78,6 +78,7 @@ const WelcomeScreen: React.FC = () => {
             Login
           </button>
         </div>
+        
       </div>
     </div>
   );

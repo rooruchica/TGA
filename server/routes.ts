@@ -19,8 +19,27 @@ import { Mistral } from '@mistralai/mistralai';
 import { Router } from "express";
 import { ObjectId } from "mongodb";
 import path from "path";
+import nodemailer from 'nodemailer';
 
 const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY || 'jRuxrXPaXaoCLMEarL3mJQH9GaGDjuZJ' });
+
+// Nodemailer configuration - REMINDER: User needs to set EMAIL_USER and EMAIL_PASS in .env
+// Also, ensure the email service allows less secure app access or use OAuth2
+const emailUser = process.env.EMAIL_USER; // e.g., your-email@gmail.com
+const emailPass = process.env.EMAIL_PASS; // e.g., your-email-password or app-specific password
+
+let transporter: nodemailer.Transporter;
+if (emailUser && emailPass) {
+  transporter = nodemailer.createTransport({
+    service: 'gmail', // Or your email provider
+    auth: {
+      user: emailUser,
+      pass: emailPass,
+    },
+  });
+} else {
+  console.warn('Email user or password not configured. Email OTP functionality will not work. Please set EMAIL_USER and EMAIL_PASS environment variables.');
+}
 
 const router = Router();
 
@@ -54,6 +73,10 @@ function generateRandomLocationNearby(baseLat: number, baseLng: number, maxDista
     lng: baseLng + lngOffset
   };
 }
+
+// Temporary in-memory store for OTPs
+// In a production environment, consider using a database (e.g., Redis or MongoDB)
+const emailOtps: { [email: string]: { code: string, expiresAt: number } } = {};
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Add right after the existing middleware but before route definitions
@@ -847,13 +870,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/itineraries/:id/places", async (req, res) => {
     try {
-      const itineraryId = parseInt(req.params.id);
+      const itineraryId = req.params.id;
 
-      if (isNaN(itineraryId)) {
-        return res.status(400).json({ message: "Invalid itinerary ID" });
+      if (!itineraryId || !ObjectId.isValid(itineraryId)) {
+        return res.status(400).json({ message: "Invalid itinerary ID format" });
       }
 
-      const itineraryPlaces = await storage.getItineraryPlaces(itineraryId.toString());
+      const itineraryPlaces = await storage.getItineraryPlaces(itineraryId);
 
       // Get full place details for each itinerary place
       const placesWithDetails = await Promise.all(
@@ -874,15 +897,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/itineraries/:id/places", async (req, res) => {
     try {
-      const itineraryId = parseInt(req.params.id);
+      const itineraryId = req.params.id;
 
-      if (isNaN(itineraryId)) {
-        return res.status(400).json({ message: "Invalid itinerary ID" });
+      if (!itineraryId || !ObjectId.isValid(itineraryId)) {
+        return res.status(400).json({ message: "Invalid itinerary ID format" });
       }
 
       const itineraryPlaceData = itineraryPlaceSchema.parse({
         ...req.body,
-        itineraryId
+        itineraryId: itineraryId // Pass the string ID
       });
 
       const itineraryPlace = await storage.createItineraryPlace(itineraryPlaceData);
@@ -892,6 +915,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
       return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/itineraries/:itineraryId/share", async (req, res) => {
+    try {
+      const { itineraryId } = req.params;
+      const { recipientUserId } = req.body;
+
+      if (!itineraryId || !recipientUserId) {
+        return res.status(400).json({ message: "Missing itineraryId or recipientUserId" });
+      }
+
+      // Fetch the itinerary
+      const itinerary = await storage.getItinerary(itineraryId);
+      if (!itinerary) {
+        return res.status(404).json({ message: "Itinerary not found" });
+      }
+
+      // Add recipientUserId to sharedWith if not already present
+      let sharedWith = itinerary.sharedWith || [];
+      if (!sharedWith.includes(recipientUserId)) {
+        sharedWith = [...sharedWith, recipientUserId];
+        await storage.updateItinerary(itineraryId, { sharedWith });
+      }
+
+      return res.status(200).json({ message: "Itinerary shared successfully" });
+    } catch (error) {
+      console.error("Error sharing itinerary:", error);
+      return res.status(500).json({ message: "Server error while sharing itinerary" });
     }
   });
 
@@ -928,6 +980,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const rawId = req.query.raw; // For debugging
+      const status = req.query.status as string | undefined; // For filtering by status
 
       if (!userId) {
         return res.status(400).json({ message: "User ID is required" });
@@ -936,8 +989,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`[API] Fetching connections for user ${userId}, raw param: ${rawId || 'none'}`);
       console.log(`[API] User ID type: ${typeof userId}`);
       
-      // Get all connections for this user
-      const connections = await storage.getConnections(userId as string);
+      // Get all connections for this user, optionally filtered by status
+      const connections = await storage.getConnections(userId as string, status);
+      console.log(`[API] Fetching connections with status: ${status || 'any'}`);
       console.log(`[API] Found ${connections.length} connections for user ${userId}`);
       
       // Debug output for each connection
@@ -1403,14 +1457,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         model: 'mistral-large-latest',
         messages: [{
           role: 'system',
-          content: 'You are a knowledgeable Maharashtra tour guide assistant. Help tourists with information about places, culture, travel tips, and local experiences in Maharashtra.'
+          content: `You are a knowledgeable Maharashtra tour guide assistant. Only answer questions about Maharashtra tourism, places, travel, or culture. If the question is off-topic, politely refuse. Always answer in 2-3 sentences, be specific, and avoid generalities or long explanations. Be concise.`
         }, {
           role: 'user',
-          content: message
-        }]
+          content: typeof message === "string" ? message : String(message)
+        }],
+        maxTokens: 120 // Limit response length for short answers
       });
 
-      if (chatResponse && chatResponse.choices && chatResponse.choices.length > 0) {
+      if (
+        chatResponse &&
+        Array.isArray(chatResponse.choices) &&
+        chatResponse.choices.length > 0 &&
+        chatResponse.choices[0].message &&
+        typeof chatResponse.choices[0].message.content === "string"
+      ) {
       res.json({ response: chatResponse.choices[0].message.content });
       } else {
         res.status(500).json({ error: 'No response from assistant' });
@@ -1878,6 +1939,357 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error creating guide user:', error);
       res.status(500).json({ message: 'Server error', error: typeof error === 'object' && error !== null && 'message' in error ? error.message : String(error) });
+    }
+  });
+
+  // Firebase Authentication endpoint
+  app.post("/api/auth/firebase-auth", async (req, res) => {
+    try {
+      console.log("============ FIREBASE AUTH REQUEST ============");
+      console.log("Firebase auth request body:", JSON.stringify(req.body, null, 2));
+      
+      const { idToken, email, displayName, phoneNumber, authProvider } = req.body;
+      
+      // Validate required fields based on auth provider
+      if (!idToken) {
+        return res.status(400).json({ message: "Missing Firebase ID token" });
+      }
+      
+      // For phone auth, we need a phone number
+      if (authProvider === 'phone' && !phoneNumber) {
+        return res.status(400).json({ message: "Missing phone number for phone authentication" });
+      }
+      
+      // For Google auth, we need an email
+      if (authProvider === 'google' && !email) {
+        return res.status(400).json({ message: "Missing email for Google authentication" });
+      }
+      
+      // First, check if user exists
+      let user = null;
+      
+      if (authProvider === 'google' && email) {
+        // Try to find user by email for Google auth
+        user = await db.collection('users').findOne({ email });
+      } else if (authProvider === 'phone' && phoneNumber) {
+        // Try to find user by phone for phone auth
+        user = await db.collection('users').findOne({ phone: phoneNumber });
+      }
+      
+      if (user) {
+        // User exists, return user data
+        console.log(`User found with ${authProvider} auth:`, user._id);
+        
+        // Return user data
+        return res.json({
+          id: user._id.toString(),
+          username: user.username,
+          fullName: user.fullName,
+          email: user.email,
+          phone: user.phone,
+          userType: user.userType,
+          createdAt: user.createdAt
+        });
+      } else {
+        // User doesn't exist, create a new user as tourist by default
+        // Generate a username from email or phone
+        let username = '';
+        let fullName = displayName || '';
+        
+        if (authProvider === 'google' && email) {
+          username = email.split('@')[0];
+        } else if (authProvider === 'phone' && phoneNumber) {
+          // Use last 6 digits of phone number as username
+          username = `user_${phoneNumber.replace(/\D/g, '').slice(-6)}`;
+        }
+        
+        // Create a new user with tourist role
+        const newUser = {
+          username,
+          fullName,
+          email: email || '',
+          phone: phoneNumber || '',
+          userType: 'tourist', // Default to tourist role
+          createdAt: new Date()
+        };
+        
+        const result = await db.collection('users').insertOne(newUser);
+        
+        console.log(`New user created with ${authProvider} auth:`, result.insertedId);
+        
+        // Return new user data
+        return res.status(201).json({
+          id: result.insertedId.toString(),
+          username: newUser.username,
+          fullName: newUser.fullName,
+          email: newUser.email,
+          phone: newUser.phone,
+          userType: newUser.userType,
+          createdAt: newUser.createdAt
+        });
+      }
+    } catch (error) {
+      console.error("Error in Firebase authentication:", error);
+      return res.status(500).json({ 
+        message: "Authentication failed", 
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Email OTP Routes
+  // Send Email OTP
+  app.post("/api/auth/email/send-otp", async (req, res) => {
+    if (!transporter) {
+      return res.status(500).json({ message: "Email service not configured. Check server configuration." });
+    }
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    try {
+      // Check if user exists with this email
+      const existingUser = await db.collection('users').findOne({ email });
+      if (!existingUser) {
+        console.log(`Attempt to send OTP to unregistered email: ${email}`);
+        // For now, we allow sending OTP even if user is not registered, to support a registration flow later if needed.
+        // If strict login-only is required, uncomment the next lines:
+        // return res.status(404).json({ message: "Email not registered. Please sign up first." });
+      }
+
+      const otp = Math.floor(100000 + Math.random() * 900000).toString(); // Generate 6-digit OTP
+      const expiresAt = Date.now() + 10 * 60 * 1000; // OTP expires in 10 minutes
+
+      emailOtps[email] = { code: otp, expiresAt };
+      console.log(`[EMAIL OTP SENT] Email: ${email}, OTP: ${otp}`); // Log the OTP
+
+      const mailOptions = {
+        from: emailUser, // sender address
+        to: email, // list of receivers
+        subject: 'Your OTP Code', // Subject line
+        text: `Your OTP code is: ${otp}. It will expire in 10 minutes.`, // plain text body
+        html: `<p>Your OTP code is: <strong>${otp}</strong>. It will expire in 10 minutes.</p>`, // html body
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log(`Email OTP sent to: ${email}`);
+      res.status(200).json({ message: "OTP sent successfully to your email." });
+
+    } catch (error: any) {
+      console.error("Error sending email OTP:", error);
+      res.status(500).json({ message: error.message || "Failed to send OTP" });
+    }
+  });
+
+  // Verify Email OTP
+  app.post("/api/auth/email/verify-otp", async (req, res) => {
+    const { email, code } = req.body;
+    if (!email || !code) {
+      return res.status(400).json({ message: "Email and OTP code are required" });
+    }
+
+    try {
+      const storedOtpData = emailOtps[email];
+
+      if (!storedOtpData) {
+        return res.status(400).json({ message: "OTP not found or expired. Please request a new one." });
+      }
+
+      if (Date.now() > storedOtpData.expiresAt) {
+        delete emailOtps[email]; // Clean up expired OTP
+        return res.status(400).json({ message: "OTP has expired. Please request a new one." });
+      }
+
+      if (storedOtpData.code !== code) {
+        return res.status(400).json({ message: "Invalid OTP code." });
+      }
+
+      // OTP is correct. Now, find the user or proceed with registration if applicable.
+      const user = await db.collection('users').findOne({ email });
+
+      if (!user) {
+        // If we reach here, it means OTP was verified for an email not yet in the user database.
+        // This could be part of a registration flow where email is verified first.
+        // For now, let's assume we need to create the user if they don't exist.
+        // Or, if only login is supported, return an error.
+        // For this example, let's return a success and let the client handle user creation/login logic based on this.
+        // A more robust solution would handle user creation here or have separate registration/login flows.
+        console.log(`OTP verified for ${email}, but no user found. Client should handle next steps (e.g., prompt for registration details).`);
+        // To strictly enforce login for existing users:
+        // delete emailOtps[email]; // Clean up used OTP
+        // return res.status(404).json({ message: "User not found with this email. Please register first." });
+        
+        // For a flow where email verification precedes registration:
+        delete emailOtps[email]; // Clean up used OTP
+        return res.status(200).json({
+          message: "Email OTP verified successfully. Email is valid.",
+          email: email,
+          isNewUser: true // Indicate to client that this email is not yet registered
+        });
+      }
+
+      // User exists, log them in (simplified for now)
+      console.log(`User ${user._id} attempting login via Email OTP.`);
+      delete emailOtps[email]; // Clean up used OTP
+
+      // Placeholder for JWT token generation or session creation
+      // const token = generateYourJwtToken(user);
+
+      res.status(200).json({
+        message: "OTP verified successfully. User logged in.",
+        user: {
+          id: user._id.toString(),
+          username: user.username,
+          fullName: user.fullName,
+          email: user.email,
+          phone: user.phone,
+          userType: user.userType,
+          createdAt: user.createdAt
+        },
+        isNewUser: false
+        // token: token // Include JWT if using token-based auth
+      });
+
+    } catch (error: any) {
+      console.error("Error verifying email OTP:", error);
+      res.status(500).json({ message: error.message || "Failed to verify OTP" });
+    }
+  });
+
+  // Auth0 Authentication endpoint
+  app.post("/api/auth/auth0-auth", async (req, res) => {
+    try {
+      console.log("============ AUTH0 AUTH REQUEST ============");
+      console.log("Auth0 auth request body:", JSON.stringify(req.body, null, 2));
+      
+      const { token, email, name, phoneNumber, authProvider } = req.body;
+      
+      // Validate required fields
+      if (!token) {
+        return res.status(400).json({ message: "Missing Auth0 token" });
+      }
+      
+      // First, check if user exists
+      let user = null;
+      
+      if (email) {
+        // Try to find user by email for email-based auth
+        user = await db.collection('users').findOne({ email });
+      } else if (phoneNumber) {
+        // Try to find user by phone for phone auth
+        user = await db.collection('users').findOne({ phone: phoneNumber });
+      }
+      
+      if (user) {
+        // User exists, return user data
+        console.log(`User found with Auth0 auth:`, user._id);
+        
+        // Return user data
+        return res.json({
+          id: user._id.toString(),
+          username: user.username,
+          fullName: user.fullName,
+          email: user.email,
+          phone: user.phone,
+          userType: user.userType,
+          createdAt: user.createdAt
+        });
+      } else {
+        // User doesn't exist, create a new user as tourist by default
+        // Generate a username from email or phone
+        let username = '';
+        let fullName = name || '';
+        
+        if (email) {
+          username = email.split('@')[0];
+        } else if (phoneNumber) {
+          // Use last 6 digits of phone number as username
+          username = `user_${phoneNumber.replace(/\D/g, '').slice(-6)}`;
+        }
+        
+        // Create a new user with tourist role
+        const newUser = {
+          username,
+          fullName,
+          email: email || '',
+          phone: phoneNumber || '',
+          userType: 'tourist', // Default to tourist role
+          createdAt: new Date()
+        };
+        
+        const result = await db.collection('users').insertOne(newUser);
+        
+        console.log(`New user created with Auth0 auth:`, result.insertedId);
+        
+        // Return new user data
+        return res.status(201).json({
+          id: result.insertedId.toString(),
+          username: newUser.username,
+          fullName: newUser.fullName,
+          email: newUser.email,
+          phone: newUser.phone,
+          userType: newUser.userType,
+          createdAt: newUser.createdAt
+        });
+      }
+    } catch (error) {
+      console.error("Error in Auth0 authentication:", error);
+      return res.status(500).json({ 
+        message: "Authentication failed", 
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // New endpoint: Get itineraries shared with a user
+  app.get("/api/users/:userId/shared-itineraries", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      // Find all itineraries where sharedWith includes userId
+      const itineraries = await db.collection('itineraries').find({ sharedWith: userId }).toArray();
+      // Format the itineraries to include id as string
+      const formatted = itineraries.map(itinerary => {
+        const { _id, ...rest } = itinerary;
+        return { ...rest, id: _id.toString() };
+      });
+      return res.json(formatted);
+    } catch (error) {
+      console.error("Error fetching shared itineraries:", error);
+      return res.status(500).json({ message: "Server error fetching shared itineraries" });
+    }
+  });
+
+  // Add this endpoint to fetch a single itinerary by ID
+  app.get('/api/itineraries/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!id) return res.status(400).json({ message: 'Itinerary ID is required' });
+      const itinerary = await db.collection('itineraries').findOne({ _id: new ObjectId(id) });
+      if (!itinerary) return res.status(404).json({ message: 'Itinerary not found' });
+      const { _id, ...rest } = itinerary;
+      return res.json({ ...rest, id: _id.toString() });
+    } catch (error) {
+      return res.status(500).json({ message: 'Server error', error: String(error) });
+    }
+  });
+
+  app.get("/api/itineraries/:id", async (req, res) => {
+    try {
+      const itineraryId = req.params.id;
+      if (!itineraryId || !ObjectId.isValid(itineraryId)) {
+        return res.status(400).json({ message: "Invalid itinerary ID format" });
+      }
+      const itinerary = await storage.getItinerary(itineraryId);
+      if (!itinerary) {
+        return res.status(404).json({ message: "Itinerary not found" });
+      }
+      return res.json(itinerary);
+    } catch (error) {
+      return res.status(500).json({ message: "Server error" });
     }
   });
 

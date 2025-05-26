@@ -9,7 +9,7 @@ const Categories: React.FC = () => {
         className="flex flex-col items-center w-16 cursor-pointer"
         onClick={() => setLocation('/hotel-booking')}
       >
-        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-1">
+        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-1">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"

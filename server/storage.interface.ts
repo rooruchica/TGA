@@ -43,4 +43,7 @@ export interface IStorage {
   updateUserLocation(userId: number, latitude: string, longitude: string): Promise<User>;
   getNearbyGuides(latitude: string, longitude: string, radiusKm?: number): Promise<User[]>;
   getNearbyPlaces(latitude: string, longitude: string, radiusKm?: number, category?: string): Promise<Place[]>;
+  
+  // Authentication methods
+  generateToken(userId: string): string;
 } 

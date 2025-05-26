@@ -16,27 +16,29 @@ import BottomNavigation from "@/components/bottom-navigation";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Itinerary } from "@shared/schema";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 // Global auth state is used instead of AuthContext
+
+type Place = { name: string; description: string };
 
 const tripSchema = z.object({
   title: z.string().min(2, "Title must be at least 2 characters"),
   description: z.string().optional(),
-  startDate: z.date({
-    required_error: "Start date is required",
-  }),
-  endDate: z.date().optional(),
-  fromCity: z.string().min(2, "From city is required"),
-  toCity: z.string().min(2, "To city is required"),
-  numberOfPlaces: z.number().min(1).optional(),
-  budget: z.string().optional(),
-}).refine(data => {
-  return !data.endDate || data.endDate > data.startDate;
-}, {
-  message: "End date must be after start date",
-  path: ["endDate"],
+  startDate: z.string().min(1, "Start date is required"),
+  endDate: z.string().optional(),
+  tripType: z.enum(["historical", "food", "adventure", "cultural", "picnic", "nature", "other"]).optional(),
+  places: z.array(z.object({
+    name: z.string().min(1, "Place name is required"),
+    description: z.string().optional(),
+  })).optional(),
 });
 
 type TripFormValues = z.infer<typeof tripSchema>;
+
+const tripTypes = [
+  "historical", "food", "adventure", "cultural", "picnic", "nature", "other"
+];
 
 const TripPlanner: React.FC = () => {
   const [_, setLocation] = useLocation();
@@ -69,15 +71,26 @@ const TripPlanner: React.FC = () => {
     enabled: !!user?.id,
   });
   
+  // Fetch itineraries shared with the user
+  const { data: sharedItineraries, isLoading: isLoadingShared } = useQuery<Itinerary[]>({
+    queryKey: ['/api/users', user?.id, 'shared-itineraries'],
+    queryFn: async () => {
+      const response = await fetch(`/api/users/${user?.id}/shared-itineraries`);
+      if (!response.ok) throw new Error('Failed to fetch shared itineraries');
+      return response.json();
+    },
+    enabled: !!user?.id,
+  });
+  
   const form = useForm<TripFormValues>({
     resolver: zodResolver(tripSchema),
     defaultValues: {
       title: "",
       description: "",
-      fromCity: "",
-      toCity: "",
-      budget: "",
-      numberOfPlaces: 1
+      startDate: "",
+      endDate: "",
+      tripType: "other",
+      places: [],
     },
   });
   
@@ -108,8 +121,76 @@ const TripPlanner: React.FC = () => {
     }
   });
   
+  const [places, setPlaces] = useState<Place[]>([]);
+  const [newPlace, setNewPlace] = useState<Place>({ name: "", description: "" });
+  const [tripType, setTripType] = useState("other");
+  // Share dialog state
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [sharingItineraryId, setSharingItineraryId] = useState<string | null>(null);
+  const [selectedGuideId, setSelectedGuideId] = useState<string | null>(null);
+  const [connectedGuides, setConnectedGuides] = useState<any[]>([]);
+  const [isFetchingConnections, setIsFetchingConnections] = useState(false);
+  
+  // Fetch connected guides (accepted connections)
+  const fetchConnectedGuides = async () => {
+    if (!user?.id) return;
+    setIsFetchingConnections(true);
+    try {
+      const response = await fetch(`/api/users/${user.id}/connections?status=accepted`);
+      if (!response.ok) throw new Error("Failed to fetch connected guides");
+      const connections = await response.json();
+      // Tourist is fromUser, guide is toUser
+      const guides = connections
+        .filter((conn: any) => conn.fromUserId === user.id && conn.toUser?.userType === "guide")
+        .map((conn: any) => ({
+          id: String(conn.toUser.id),
+          name: conn.toUser.fullName || conn.toUser.name || conn.toUser.username || conn.toUser.email || "Unnamed Guide",
+        }));
+      setConnectedGuides(guides);
+    } catch (error) {
+      setConnectedGuides([]);
+    } finally {
+      setIsFetchingConnections(false);
+    }
+  };
+  
+  // Add place to itinerary
+  const handleAddPlace = () => {
+    if (!newPlace.name) return;
+    setPlaces([...places, newPlace]);
+    setNewPlace({ name: "", description: "" });
+    form.setValue("places", [...places, newPlace]);
+  };
+  
+  // Remove place from itinerary
+  const handleRemovePlace = (index: number) => {
+    const updated = [...places];
+    updated.splice(index, 1);
+    setPlaces(updated);
+    form.setValue("places", updated);
+  };
+  
+  // Share itinerary handler
+  const handleShareItinerary = async () => {
+    if (!sharingItineraryId || !selectedGuideId) return;
+    try {
+      const response = await apiRequest("POST", `/api/itineraries/${sharingItineraryId}/share`, {
+        recipientUserId: selectedGuideId,
+      });
+      if (!response.ok) throw new Error("Failed to share itinerary");
+      toast({ title: "Itinerary Shared", description: "The itinerary has been shared with your guide." });
+      setIsShareDialogOpen(false);
+      setSharingItineraryId(null);
+      setSelectedGuideId(null);
+      // Invalidate shared itineraries query so the list updates
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "shared-itineraries"] });
+    } catch (error) {
+      toast({ title: "Failed to share itinerary", description: error instanceof Error ? error.message : "An error occurred.", variant: "destructive" });
+    }
+  };
+  
   const onSubmit = (data: TripFormValues) => {
-    createTrip.mutate(data);
+    createTrip.mutate({ ...data, places });
   };
 
   return (
@@ -161,36 +242,6 @@ const TripPlanner: React.FC = () => {
                 )}
               />
               
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="fromCity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <Label>From City</Label>
-                      <FormControl>
-                        <Input placeholder="e.g. Mumbai" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="toCity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <Label>To City</Label>
-                      <FormControl>
-                        <Input placeholder="e.g. Pune" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
               <FormField
                 control={form.control}
                 name="description"
@@ -209,20 +260,6 @@ const TripPlanner: React.FC = () => {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="budget"
-                render={({ field }) => (
-                  <FormItem>
-                    <Label>Budget (Optional)</Label>
-                    <FormControl>
-                      <Input placeholder="e.g. ₹15000" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
               <div className="flex space-x-3">
                 <FormField
                   control={form.control}
@@ -238,7 +275,7 @@ const TripPlanner: React.FC = () => {
                               className={`w-full pl-3 text-left font-normal ${!field.value && "text-muted-foreground"}`}
                             >
                               {field.value ? (
-                                format(field.value, "dd-MM-yyyy")
+                                format(new Date(field.value), "dd-MM-yyyy")
                               ) : (
                                 <span>Select date</span>
                               )}
@@ -289,7 +326,7 @@ const TripPlanner: React.FC = () => {
                               className={`w-full pl-3 text-left font-normal ${!field.value && "text-muted-foreground"}`}
                             >
                               {field.value ? (
-                                format(field.value, "dd-MM-yyyy")
+                                format(new Date(field.value), "dd-MM-yyyy")
                               ) : (
                                 <span>Select date</span>
                               )}
@@ -328,6 +365,45 @@ const TripPlanner: React.FC = () => {
                     </FormItem>
                   )}
                 />
+              </div>
+              
+              <div>
+                <Label>Trip Type</Label>
+                <Select value={tripType} onValueChange={setTripType}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a trip type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tripTypes.map((type) => (
+                      <SelectItem key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Places UI */}
+              <div className="space-y-2">
+                <Label>Add Places</Label>
+                <div className="flex gap-2">
+                  <Input placeholder="Place name" value={newPlace.name} onChange={e => setNewPlace({ ...newPlace, name: e.target.value })} />
+                  <Input placeholder="Description" value={newPlace.description} onChange={e => setNewPlace({ ...newPlace, description: e.target.value })} />
+                  <Button type="button" onClick={handleAddPlace}>Add</Button>
+                </div>
+                {places.length > 0 && (
+                  <div className="border rounded-md divide-y mt-2">
+                    {places.map((place, idx) => (
+                      <div key={idx} className="flex justify-between items-center p-2">
+                        <div>
+                          <div className="font-medium">{place.name}</div>
+                          <div className="text-sm text-gray-500">{place.description}</div>
+                        </div>
+                        <Button type="button" variant="ghost" size="sm" className="text-red-500 h-8 w-8 p-0" onClick={() => handleRemovePlace(idx)}>
+                          &times;
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               
               <Button 
@@ -389,6 +465,65 @@ const TripPlanner: React.FC = () => {
             </Button>
           </div>
           
+          <div className="mb-6">
+            <h3 className="text-lg font-medium mb-2">Shared With Me</h3>
+            <p className="text-gray-600 text-sm mb-3">Itineraries shared with you by guides</p>
+            {isLoadingShared ? (
+              <div className="text-center py-4">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-6 h-6 animate-spin mx-auto text-[#DC143C]"
+                >
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+              </div>
+            ) : sharedItineraries && sharedItineraries.length > 0 ? (
+              <div className="space-y-3">
+                {sharedItineraries.map((itinerary: Itinerary) => (
+                  <div key={itinerary.id} className="bg-white rounded-lg shadow-md p-4 border-l-4 border-green-500">
+                    <h4 className="font-medium">{itinerary.title}</h4>
+                    <p className="text-sm text-gray-500 mt-1">{itinerary.description}</p>
+                    <div className="flex justify-between items-center mt-2 text-sm">
+                      <span className="text-gray-600">
+                        {itinerary.startDate ? format(new Date(itinerary.startDate), "dd MMM yyyy") : ""}
+                        {itinerary.endDate ? ` - ${format(new Date(itinerary.endDate), "dd MMM yyyy")}` : ""}
+                      </span>
+                      <Button size="sm" variant="outline" onClick={() => setLocation(`/itinerary/${itinerary.id}`)}>View Details</Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-gray-400 mb-2">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="w-12 h-12 mx-auto"
+                  >
+                    <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                    <path d="M16 2v4" />
+                    <path d="M8 2v4" />
+                    <path d="M3 10h18" />
+                  </svg>
+                </div>
+                <p className="text-gray-600">No itineraries have been shared with you yet</p>
+                <p className="text-gray-500 text-sm">When a guide shares an itinerary, it will appear here</p>
+              </div>
+            )}
+          </div>
+          
           <div>
             <h3 className="text-lg font-medium mb-2">Upcoming Trips</h3>
             
@@ -418,7 +553,14 @@ const TripPlanner: React.FC = () => {
                         {itinerary.startDate ? format(new Date(itinerary.startDate), "dd MMM yyyy") : ""}
                         {itinerary.endDate ? ` - ${format(new Date(itinerary.endDate), "dd MMM yyyy")}` : ""}
                       </span>
-                      <Button size="sm" variant="outline">View Details</Button>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setLocation(`/itinerary/${itinerary.id}`)}>View Details</Button>
+                        <Button size="sm" variant="outline" onClick={() => {
+                          setSharingItineraryId(itinerary.id);
+                          setIsShareDialogOpen(true);
+                          fetchConnectedGuides();
+                        }}>Share</Button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -449,6 +591,40 @@ const TripPlanner: React.FC = () => {
           </div>
         </div>
       )}
+      
+      {/* Share Itinerary Dialog */}
+      <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Share Itinerary</DialogTitle>
+            <DialogDescription>Select a guide to share this itinerary with.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            {isFetchingConnections ? (
+              <p>Loading connections...</p>
+            ) : connectedGuides.length > 0 ? (
+              <Select onValueChange={value => setSelectedGuideId(value || null)} value={selectedGuideId || ""}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a guide" />
+                </SelectTrigger>
+                <SelectContent>
+                  {connectedGuides.map((guide) => (
+                    <SelectItem key={guide.id} value={guide.id}>
+                      {guide.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <p className="text-gray-500">No connected guides found. You can only share itineraries with guides you are connected to.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsShareDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleShareItinerary} disabled={!selectedGuideId || isFetchingConnections} className="bg-green-600 hover:bg-green-700">Share Itinerary</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       {/* Bottom Navigation */}
       <BottomNavigation />

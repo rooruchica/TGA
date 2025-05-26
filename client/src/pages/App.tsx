@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { fetchApi } from "@/lib/api-client";
 import { checkServerAndShowError } from "@/lib/check-server";
 
+
 // Import components
 import WelcomeScreen from "@/components/welcome-screen";
 import LoginScreen from "@/components/login-screen";
@@ -18,12 +19,18 @@ import Connections from "@/pages/connections";
 import Profile from "@/pages/profile";
 import GuideProfile from "@/pages/guide-profile";
 import NotFound from "@/pages/not-found";
+import ItineraryDetails from "@/pages/itinerary/[id]";
 
 // Import guide pages
 import GuideDashboard from "@/pages/guide-dashboard";
 import GuideRequests from "@/pages/guide-requests";
 import GuideItineraries from "@/pages/guide-itineraries";
 import GuideConnections from "@/pages/guide-connections";
+
+// Import Auth0 demo page
+import Auth0DemoPage from "@/pages/auth0-demo-page";
+
+
 
 // Define user type
 export interface User {
@@ -183,6 +190,8 @@ function App() {
         <Route path="/" component={WelcomeScreen} />
         <Route path="/login" component={LoginScreenWithAuth} />
         <Route path="/register" component={RegisterScreen} />
+        <Route path="/auth0-demo" component={Auth0DemoPage} />
+        
         
         {/* Protected routes - only accessible when logged in */}
         {user ? (
@@ -197,6 +206,7 @@ function App() {
                 <Route path="/trip-planner" component={TripPlanner} />
                 <Route path="/connections" component={Connections} />
                 <Route path="/profile" component={() => <Profile user={user} logout={logout} />} />
+                <Route path="/itinerary/:id" component={ItineraryDetails} />
               </>
             )}
             
@@ -208,6 +218,7 @@ function App() {
                 <Route path="/guide-itineraries" component={GuideItineraries} />
                 <Route path="/guide-connections" component={GuideConnections} />
                 <Route path="/guide-profile" component={GuideProfile} />
+                <Route path="/itinerary/:id" component={ItineraryDetails} />
               </>
             )}
           </>
@@ -215,7 +226,7 @@ function App() {
           // Redirect to login if trying to access protected routes while not logged in
           <Route path="/:rest*">
             {(params: any) => {
-              if (params.rest && !['', 'login', 'register'].includes(params.rest)) {
+              if (params.rest && !['', 'login', 'register', 'auth0-demo'].includes(params.rest)) {
                 setLocation('/login');
                 return null;
               }

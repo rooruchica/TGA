@@ -17,6 +17,7 @@ interface Connection {
   createdAt: string;
   tourist?: {
     fullName?: string;
+    profilePicture?: string;
   };
 }
 
@@ -149,7 +150,7 @@ const RequestsPreview: React.FC = () => {
               <CardContent className="p-3">
                 <div className="flex items-center">
                   <Avatar className="h-10 w-10 mr-3">
-                    <AvatarImage src="" alt={request.tourist?.fullName} />
+                    <AvatarImage src={request.tourist?.profilePicture || "https://api.dicebear.com/9.x/notionists/svg?seed=Adrian"} alt={request.tourist?.fullName} />
                     <AvatarFallback>
                       {request.tourist?.fullName?.charAt(0) || '?'}
                     </AvatarFallback>

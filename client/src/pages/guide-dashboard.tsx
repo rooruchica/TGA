@@ -550,7 +550,7 @@ const GuideDashboard: React.FC = () => {
       <div className="p-4 border-b flex flex-col md:flex-row md:items-center gap-4 bg-white z-10">
         <div className="flex items-center gap-3 flex-1">
           <Avatar className="h-12 w-12">
-            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.username || 'guide'}`} />
+            <AvatarImage src={currentUser?.profilePicture || "https://api.dicebear.com/9.x/notionists/svg?seed=Adrian"} />
             <AvatarFallback>{currentUser?.name?.[0] || currentUser?.username?.[0] || 'G'}</AvatarFallback>
           </Avatar>
           <div>

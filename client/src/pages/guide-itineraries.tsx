@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import GuideBottomNavigation from "@/components/guide/bottom-navigation";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Share2 } from 'lucide-react';
 
 // Define Itinerary type
 interface Itinerary {
@@ -24,6 +26,13 @@ interface Itinerary {
   endDate?: string | Date;
   places?: any[];
   tripType?: 'historical' | 'food' | 'adventure' | 'cultural' | 'picnic' | 'nature' | 'other';
+}
+
+// Define ConnectedUser type (simplified for now)
+interface ConnectedUser {
+  id: string; // User ID of the tourist
+  name: string; // Name of the tourist
+  // Potentially other details like profile picture, connection ID etc.
 }
 
 // Helper function to get trip type badge class based on type
@@ -67,6 +76,13 @@ const GuideItineraries: React.FC = () => {
     places: [] as Array<{name: string; description: string}>
   });
   const [newPlace, setNewPlace] = useState({name: "", description: ""});
+
+  // State for Share Itinerary Dialog
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [sharingItineraryId, setSharingItineraryId] = useState<string | null>(null);
+  const [connectedTourists, setConnectedTourists] = useState<ConnectedUser[]>([]);
+  const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null);
+  const [isFetchingConnections, setIsFetchingConnections] = useState(false);
   
   const user = (window as any).auth?.user;
   
@@ -90,6 +106,17 @@ const GuideItineraries: React.FC = () => {
       }
     },
     enabled: !!user?.id
+  });
+  
+  // Fetch itineraries shared with the guide
+  const { data: sharedItineraries, isLoading: isLoadingShared } = useQuery<Itinerary[]>({
+    queryKey: ["/api/users", user?.id, "shared-itineraries"],
+    queryFn: async () => {
+      const response = await fetch(`/api/users/${user?.id}/shared-itineraries`);
+      if (!response.ok) throw new Error("Failed to fetch shared itineraries");
+      return response.json();
+    },
+    enabled: !!user?.id,
   });
   
   // Handle creating a new itinerary
@@ -153,6 +180,81 @@ const GuideItineraries: React.FC = () => {
       toast({
         title: "Failed to create itinerary",
         description: error instanceof Error ? error.message : "There was an error creating your itinerary. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Fetch connected tourists
+  const fetchConnectedTourists = async () => {
+    if (!user?.id) return;
+    setIsFetchingConnections(true);
+    try {
+      console.log("Fetching accepted connections for guide ID:", user.id);
+      const response = await fetch(`/api/users/${user.id}/connections?status=accepted`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch connected tourists');
+      }
+      const connections: any[] = await response.json();
+      
+      // Filter for connections where the current user is the guide (toUser)
+      // and the other user is a tourist (fromUser)
+      const tourists = connections
+        .filter(conn => conn.toUserId === user.id && conn.fromUser?.userType === 'tourist')
+        .map(conn => ({
+          id: String(conn.fromUser.id),
+          name: conn.fromUser.fullName || conn.fromUser.name || conn.fromUser.username || conn.fromUser.email || 'Unnamed Tourist',
+        }));
+      setConnectedTourists(tourists);
+    } catch (error) {
+      console.error("Error fetching connected tourists:", error);
+      toast({
+        title: "Failed to fetch connections",
+        description: "Could not load your connected tourists. Please try again.",
+        variant: "destructive",
+      });
+      setConnectedTourists([]);
+    } finally {
+      setIsFetchingConnections(false);
+    }
+  };
+
+  // Handle sharing an itinerary
+  const handleShareItinerary = async () => {
+    if (!sharingItineraryId || !selectedRecipientId) {
+      toast({
+        title: "Selection missing",
+        description: "Please select an itinerary and a recipient.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      console.log(`Sharing itinerary ${sharingItineraryId} with ${selectedRecipientId}`);
+      const response = await apiRequest('POST', `/api/itineraries/${sharingItineraryId}/share`, {
+        recipientUserId: selectedRecipientId,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to share itinerary");
+      }
+
+      toast({
+        title: "Itinerary Shared",
+        description: "The itinerary has been successfully shared.",
+      });
+      setIsShareDialogOpen(false);
+      setSharingItineraryId(null);
+      setSelectedRecipientId(null);
+      // Invalidate shared itineraries query so the list updates
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id, "shared-itineraries"] });
+    } catch (error) {
+      console.error("Error sharing itinerary:", error);
+      toast({
+        title: "Failed to share itinerary",
+        description: error instanceof Error ? error.message : "An unexpected error occurred.",
         variant: "destructive",
       });
     }
@@ -412,10 +514,8 @@ const GuideItineraries: React.FC = () => {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100"
-                        onClick={() => {
-                          setLocation(`/guide-itineraries/${itemId}/view`);
-                        }}
+                        className="text-blue-600 border-blue-200 bg-red-50 hover:bg-red-100"
+                        onClick={() => setLocation(`/itinerary/${itemId}`)}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -431,6 +531,34 @@ const GuideItineraries: React.FC = () => {
                           <path d="m9 12 2 2 4-4" />
                         </svg>
                         View
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-green-600 border-green-200 bg-green-50 hover:bg-green-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSharingItineraryId(itemId || "");
+                          fetchConnectedTourists(); // Fetch connections when dialog is about to open
+                          setIsShareDialogOpen(true);
+                          setSelectedRecipientId(null); // Reset selection
+                        }}
+                      >
+                        <svg 
+                          xmlns="http://www.w3.org/2000/svg" 
+                          viewBox="0 0 24 24" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          strokeWidth="2" 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          className="w-4 h-4 mr-1"
+                        >
+                          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                          <polyline points="16 6 12 2 8 6" />
+                          <Share2 className="w-4 h-4 mr-1" />
+                        </svg>
+                        Share
                       </Button>
                     </CardFooter>
                   </Card>
@@ -635,6 +763,114 @@ const GuideItineraries: React.FC = () => {
       </Dialog>
       
       <GuideBottomNavigation />
+
+      {/* Share Itinerary Dialog */}
+      <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Share Itinerary</DialogTitle>
+            <DialogDescription>
+              Select a tourist to share this itinerary with.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            {isFetchingConnections ? (
+              <p>Loading connections...</p>
+            ) : connectedTourists.length > 0 ? (
+              <Select onValueChange={(value) => setSelectedRecipientId(value)} value={selectedRecipientId || ""}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a tourist" />
+                </SelectTrigger>
+                <SelectContent>
+                  {connectedTourists.map((tourist) => (
+                    <SelectItem key={tourist.id} value={tourist.id}>
+                      {tourist.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <p className="text-gray-500">No connected tourists found. You can only share itineraries with tourists you are connected to.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsShareDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleShareItinerary} 
+              disabled={!selectedRecipientId || isFetchingConnections}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Share Itinerary
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Shared With Me Section */}
+      <div className="px-4 pt-2">
+        <div className="mb-6">
+          <h3 className="text-lg font-medium mb-2">Shared With Me</h3>
+          <p className="text-gray-600 text-sm mb-3">Itineraries shared with you by tourists</p>
+          {isLoadingShared ? (
+            <div className="text-center py-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-6 h-6 animate-spin mx-auto text-[#DC143C]"
+              >
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+            </div>
+          ) : sharedItineraries && sharedItineraries.length > 0 ? (
+            <div className="space-y-3">
+              {sharedItineraries.map((itinerary: Itinerary) => (
+                <Card key={itinerary.id} className="bg-white rounded-lg shadow-md p-4 border-l-4 border-green-500">
+                  <CardContent>
+                    <h4 className="font-medium">{itinerary.title}</h4>
+                    <p className="text-sm text-gray-500 mt-1">{itinerary.description}</p>
+                    <div className="flex justify-between items-center mt-2 text-sm">
+                      <span className="text-gray-600">
+                        {itinerary.startDate ? new Date(itinerary.startDate).toLocaleDateString() : ""}
+                        {itinerary.endDate ? ` - ${new Date(itinerary.endDate).toLocaleDateString()}` : ""}
+                      </span>
+                      <Button size="sm" variant="outline" onClick={() => setLocation(`/itinerary/${itinerary.id}`)}>View Details</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-gray-400 mb-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-12 h-12 mx-auto"
+                >
+                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                  <path d="M16 2v4" />
+                  <path d="M8 2v4" />
+                  <path d="M3 10h18" />
+                </svg>
+              </div>
+              <p className="text-gray-600">No itineraries have been shared with you yet</p>
+              <p className="text-gray-500 text-sm">When a tourist shares an itinerary, it will appear here</p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

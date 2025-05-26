@@ -197,7 +197,7 @@ const HotelBooking: React.FC = () => {
               </Button>
             </div>
             
-            <div className="mb-4 p-3 bg-blue-50 rounded-md">
+            <div className="mb-4 p-3 bg-red-50 rounded-md">
               <h4 className="font-medium">{selectedHotel.HotelName}</h4>
               <p className="text-sm text-gray-600">{selectedHotel.Category}</p>
               <p className="text-sm text-gray-600">{selectedHotel.Address}, {selectedHotel.City}, {selectedHotel.State}</p>

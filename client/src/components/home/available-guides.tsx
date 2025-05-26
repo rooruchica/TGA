@@ -219,7 +219,7 @@ export default function AvailableGuides() {
             <CardContent className="p-4">
               <div className="flex items-center gap-4">
                 <Avatar className="h-12 w-12">
-                  <AvatarImage src={guide.imageUrl} />
+                  <AvatarImage src={guide.imageUrl || "https://api.dicebear.com/9.x/notionists/svg?seed=Adrian"} />
                   <AvatarFallback>{guide.fullName?.[0] || 'G'}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">

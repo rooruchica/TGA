@@ -1,7 +1,7 @@
 // API client for making fetch requests with consistent error handling
 
 // Base URL for API requests - use relative path in production
-export const API_BASE_URL = import.meta.env.PROD ? '' : 'http://localhost:5000';
+export const API_BASE_URL = import.meta.env.PROD ? '' : 'http://localhost:10000';
 
 /**
  * Returns the full API URL for a given path

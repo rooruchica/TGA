@@ -701,7 +701,7 @@ const GuideConnections: React.FC = () => {
           <TabsList className="w-full grid grid-cols-3 mb-4 h-12 bg-gray-100">
             <TabsTrigger 
               value="pending" 
-              className="relative data-[state=active]:bg-blue-50 data-[state=active]:text-blue-800 data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600"
+              className="relative data-[state=active]:bg-red-50 data-[state=active]:text-blue-800 data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600"
               onClick={() => setActiveTab('pending')}
             >
               <span className="flex items-center">
@@ -865,7 +865,7 @@ const GuideConnections: React.FC = () => {
                     </div>
                   ) : acceptedConnections.length === 0 ? (
                     <div className="flex flex-col items-center justify-center p-6 text-center">
-                      <div className="mb-3 bg-blue-100 p-3 rounded-full">
+                      <div className="mb-3 bg-red-100 p-3 rounded-full">
                         <CheckCircle className="h-8 w-8 text-blue-600" />
                       </div>
                       <h3 className="text-lg font-semibold">No accepted connections yet</h3>
@@ -944,7 +944,7 @@ const GuideConnections: React.FC = () => {
                             
                             {/* Trip details in a nice formatted box */}
                             {connection.tripDetails && (
-                              <div className="mb-3 text-sm bg-blue-50 p-3 rounded-md">
+                              <div className="mb-3 text-sm bg-red-50 p-3 rounded-md">
                                 <h4 className="font-semibold text-gray-700 mb-1">Trip Details</h4>
                                 <p className="font-medium text-gray-700">{connection.tripDetails}</p>
                                 
@@ -959,7 +959,7 @@ const GuideConnections: React.FC = () => {
                             
                             <div className="flex justify-between space-x-3 mt-3">
                               <Button 
-                                className="flex-1 bg-blue-600 hover:bg-blue-700"
+                                className="flex-1 bg-red-600 hover:bg-red-700"
                                 onClick={() => openChat(connection)}
                               >
                                 <span className="flex items-center">

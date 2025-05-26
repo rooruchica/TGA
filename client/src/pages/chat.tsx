@@ -168,7 +168,7 @@ export default function ChatHub() {
                   <div className="flex items-center">
                     <Avatar className="h-12 w-12">
                       <AvatarImage 
-                        src={otherUser?.profilePicture} 
+                        src={otherUser?.profilePicture || "https://api.dicebear.com/9.x/notionists/svg?seed=Adrian"} 
                         alt={otherUser?.name || "User"} 
                       />
                       <AvatarFallback>

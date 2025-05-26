@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import BottomNavigation from "@/components/bottom-navigation";
-import MapView, { MarkerType } from "@/components/map-view";
+import MapView from "@/components/map-view";
 import Categories from "@/components/home/categories";
 import FeaturedPlaces from "@/components/home/featured-places";
 import AvailableGuides from "@/components/home/available-guides";
@@ -35,6 +35,11 @@ const Dashboard: React.FC = () => {
   const [currentPosition, setCurrentPosition] = useState<{lat: number, lng: number} | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationUpdateInterval, setLocationUpdateInterval] = useState<number | null>(null);
+  const [isSheetOpen, setIsSheetOpen] = useState(true);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const startY = useRef<number | null>(null);
+  const startHeight = useRef<number | null>(null);
+  const [sheetHeight, setSheetHeight] = useState<number>(400); // initial height in px
   
   // Fetch places from API
   const { data: rawPlaces = [], isLoading: isLoadingPlaces } = useQuery<Place[]>({
@@ -254,7 +259,7 @@ const Dashboard: React.FC = () => {
           },
           title: place.name,
           popup: place.name,
-          markerType: 'attraction' as MarkerType,
+          markerType: 'attraction',
           customIcon: true
         }));
       
@@ -271,7 +276,7 @@ const Dashboard: React.FC = () => {
         },
         title: guide.name || guide.username,
         popup: `Guide: ${guide.name || guide.username}`,
-        markerType: 'guide' as MarkerType,
+        markerType: 'guide',
         customIcon: true,
         isLive: true // Mark as live location
       }));
@@ -289,7 +294,7 @@ const Dashboard: React.FC = () => {
         },
         title: tourist.name || tourist.username,
         popup: `Tourist: ${tourist.name || tourist.username}`,
-        markerType: 'user' as MarkerType,
+        markerType: 'user',
         customIcon: true,
         isLive: true // Mark as live location
       }));
@@ -304,7 +309,7 @@ const Dashboard: React.FC = () => {
         position: currentPosition,
         title: 'Your Location',
         popup: 'You are here',
-        markerType: 'user' as MarkerType,
+        markerType: 'user',
         customIcon: true,
         isLive: !!locationUpdateInterval // Only mark as live if tracking is enabled
       });
@@ -323,69 +328,78 @@ const Dashboard: React.FC = () => {
     return { lat: 19.076, lng: 72.8777 };
   }, [currentPosition]);
   
+  // Drag logic for bottom sheet (simple pure React/CSS)
+  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    startY.current = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    startHeight.current = sheetRef.current ? sheetRef.current.offsetHeight : 400;
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', handleDragMove as any);
+    window.addEventListener('touchmove', handleDragMove as any);
+    window.addEventListener('mouseup', handleDragEnd as any);
+    window.addEventListener('touchend', handleDragEnd as any);
+  };
+  const handleDragMove = (e: MouseEvent | TouchEvent) => {
+    if (startY.current !== null && startHeight.current !== null) {
+      const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
+      const delta = startY.current - clientY;
+      setSheetHeight(Math.max(120, Math.min(window.innerHeight - 80, startHeight.current + delta)));
+    }
+  };
+  const handleDragEnd = () => {
+    startY.current = null;
+    startHeight.current = null;
+    document.body.style.userSelect = '';
+    window.removeEventListener('mousemove', handleDragMove as any);
+    window.removeEventListener('touchmove', handleDragMove as any);
+    window.removeEventListener('mouseup', handleDragEnd as any);
+    window.removeEventListener('touchend', handleDragEnd as any);
+  };
+  
   return (
-    <div className="h-full flex flex-col pb-14">
-      {/* Header */}
-      <div className="relative z-10 bg-white shadow-md">
-        <div className="flex items-center p-3 bg-white">
-          <button className="p-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-5 h-5 text-gray-600"
-            >
-              <line x1="4" x2="20" y1="12" y2="12" />
-              <line x1="4" x2="20" y1="6" y2="6" />
-              <line x1="4" x2="20" y1="18" y2="18" />
-            </svg>
-          </button>
-          <div className="flex-1 mx-2 relative">
+    <div className="flex flex-col min-h-screen pb-20">
+      {/* Map and search bar */}
+      <div className="fixed inset-0 z-0">
+        <MapView
+          center={mapCenter}
+          zoom={currentPosition ? 15 : 12}
+          markers={mapMarkers}
+          className="w-full h-full"
+        />
+        <div className="absolute top-4 left-4 right-4 z-10">
             <Input 
               type="text" 
               placeholder="Search locations in Maharashtra" 
               className="w-full pl-9 rounded-full"
               onClick={() => setLocation('/search')}
             />
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-4 h-4 absolute left-3 top-3 text-gray-500"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.3-4.3" />
-            </svg>
-          </div>
-          <ChatAssistant />
         </div>
       </div>
       
-      {/* Map View */}
-      <div className="flex-1 relative">
-        <MapView
-          center={mapCenter}
-          zoom={currentPosition ? 15 : 12}
-          markers={mapMarkers}
-          bottomSheetOpen={bottomSheetOpen}
-          onBottomSheetOpenChange={setBottomSheetOpen}
-          enableDragging={true}
-          bottomSheetContent={
-            <div className="p-4 pb-28 space-y-6">
+      {/* Custom Bottom Sheet */}
+      <div
+        ref={sheetRef}
+        className={`fixed left-0 right-0 z-30 bg-white rounded-t-2xl shadow-2xl transition-all duration-300 ${isSheetOpen ? '' : 'translate-y-[80%]'} overflow-y-auto`}
+        style={{
+          bottom: 0,
+          height: sheetHeight,
+          minHeight: 120,
+          maxHeight: '80vh',
+        }}
+      >
+        {/* Drag handle */}
+        <div
+          className="w-full flex justify-center py-2 cursor-row-resize"
+          onMouseDown={handleDragStart}
+          onTouchStart={handleDragStart}
+        >
+          <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
+        </div>
+        <div className="p-4 space-y-6">
               <Categories />
-              <FeaturedPlaces places={places} isLoading={isLoading} />
+          <FeaturedPlaces places={places} isLoading={isLoadingWikimedia} />
               <AvailableGuides />
             </div>
-          }
-        />
+      </div>
         
         {/* Floating Action Button for location tracking */}
         <Button
@@ -413,7 +427,6 @@ const Dashboard: React.FC = () => {
             <span className="text-xs font-medium">Live location active</span>
           </div>
         )}
-      </div>
       
       {/* Global styles */}
       <style dangerouslySetInnerHTML={{

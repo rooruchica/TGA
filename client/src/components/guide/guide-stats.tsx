@@ -53,7 +53,7 @@ const GuideStats: React.FC = () => {
       
       <Card>
         <CardContent className="p-3 flex flex-col items-center">
-          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mb-2">
+          <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center mb-2">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"

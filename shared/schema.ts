@@ -69,7 +69,9 @@ export const itinerarySchema = z.object({
   toCity: z.string().optional(),
   numberOfPlaces: z.number().optional(),
   budget: z.string().optional(),
-  tripType: z.enum(['historical', 'food', 'adventure', 'cultural', 'picnic', 'nature', 'other']).optional()
+  tripType: z.enum(['historical', 'food', 'adventure', 'cultural', 'picnic', 'nature', 'other']).optional(),
+  // New: sharedWith is an array of user IDs
+  sharedWith: z.array(z.string()).optional(),
 });
 
 export type Itinerary = z.infer<typeof itinerarySchema>;

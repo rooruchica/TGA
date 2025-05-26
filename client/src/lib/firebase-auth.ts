@@ -1,6 +1,6 @@
 import { 
   GoogleAuthProvider, 
-  signInWithPopup, 
+  signInWithRedirect, 
   signInWithPhoneNumber, 
   RecaptchaVerifier,
   PhoneAuthProvider,
@@ -37,42 +37,10 @@ export const initRecaptcha = (containerId: string) => {
 export const signInWithGoogle = async (): Promise<User> => {
   try {
     const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    
-    // Get user info from Google auth
-    const { user } = result;
-    const idToken = await user.getIdToken();
-    
-    // Now connect with our backend to either login or register
-    const backendUser = await fetchApi<User>("/api/auth/firebase-auth", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        idToken,
-        email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL,
-        phoneNumber: user.phoneNumber,
-        authProvider: "google"
-      }),
-    });
-    
-    // Create user object with isGuide property
-    const userData: User = {
-      ...backendUser,
-      isGuide: backendUser.userType === 'guide'
-    };
-    
-    // Update localStorage
-    localStorage.setItem("user", JSON.stringify(userData));
-    
-    // Update global auth state
-    if ((window as any).auth) {
-      (window as any).auth.user = userData;
-      (window as any).auth.isAuthenticated = true;
-    }
-    
-    return userData;
+    await signInWithRedirect(auth, provider);
+    // The redirect will take the user away from the app, and you need to handle the result after redirect
+    // You may want to handle the result in your app's entry point or a dedicated callback handler
+    throw new Error("Redirecting to Google sign-in. Please complete the sign-in and return to the app.");
   } catch (error: any) {
     console.error("Google sign in error:", error);
     throw new Error(error.message || "Google authentication failed");

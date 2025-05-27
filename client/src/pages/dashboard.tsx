@@ -365,13 +365,16 @@ const Dashboard: React.FC = () => {
           markers={mapMarkers}
           className="w-full h-full"
         />
-        <div className="absolute top-4 left-4 right-4 z-10">
+        <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between">
             <Input 
               type="text" 
               placeholder="Search locations in Maharashtra" 
               className="w-full pl-9 rounded-full"
               onClick={() => setLocation('/search')}
             />
+            <div className="ml-3 flex-shrink-0">
+              <ChatAssistant />
+            </div>
         </div>
       </div>
       

@@ -65,7 +65,8 @@ const MapView = ({
       if (!mapInstance.current) {
         mapInstance.current = new (window as any).google.maps.Map(mapRef.current, {
           center,
-        zoom,
+          zoom,
+          gestureHandling: 'greedy',
         });
         if (onMapLoad) onMapLoad(mapInstance.current);
       } else {

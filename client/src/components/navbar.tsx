@@ -1,6 +1,7 @@
 import { useLocation } from "wouter";
 import { Home, Users, AlertCircle, MapPin, MessageSquare, Search } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
+import { ChatAssistant } from "@/components/chat-assistant";
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -34,7 +35,7 @@ const Navbar: React.FC<NavbarProps> = ({ forceGuide }) => {
   const isGuide = forceGuide || (user && user.userType === "guide");
 
   return (
-    <nav className="bg-white border-b">
+    <nav className="bg-white border-b z-50 sticky top-0">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-4">

@@ -51,6 +51,13 @@ function App() {
   const [, setLocation] = useLocation();
   const [serverChecked, setServerChecked] = useState(false);
   
+  // Prompt for location permission on app load
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(() => {}, () => {});
+    }
+  }, []);
+  
   // Check if backend server is running
   useEffect(() => {
     async function checkServer() {

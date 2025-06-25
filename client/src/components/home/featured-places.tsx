@@ -110,7 +110,15 @@ const FeaturedPlaces: React.FC<FeaturedPlacesProps> = ({ places, isLoading }) =>
       <div className="flex space-x-3 overflow-x-auto pb-2">
         {featuredPlaces.length > 0 ? (
           featuredPlaces.map((place) => (
-            <div key={place.id} className="flex-shrink-0 w-40 rounded-lg overflow-hidden shadow-md">
+            <div 
+              key={place.id} 
+              className="flex-shrink-0 w-40 rounded-lg overflow-hidden shadow-md"
+              onClick={() => {
+                setSelectedPlace(place.name);
+                setInfoDialogOpen(true);
+              }}
+              style={{ cursor: 'pointer' }}
+            >
               <div className="relative">
                 <div 
                   className="w-full h-24 bg-gray-200 bg-cover bg-center"
@@ -154,6 +162,7 @@ const FeaturedPlaces: React.FC<FeaturedPlacesProps> = ({ places, isLoading }) =>
                   <button
                     onClick={(e) => {
                       e.preventDefault();
+                      e.stopPropagation(); // Prevent card click
                       setSelectedPlace(place.name);
                       setInfoDialogOpen(true);
                     }}

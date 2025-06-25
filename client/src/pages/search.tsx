@@ -132,7 +132,13 @@ const SearchPage = () => {
   const watchIdRef = useRef<number | null>(null);
   const [autocompleteResults, setAutocompleteResults] = useState<any[]>([]);
   const [autocompleteLoading, setAutocompleteLoading] = useState(false);
+  const [showDirections, setShowDirections] = useState(false);
+  const [selectedTravelMode, setSelectedTravelMode] = useState("DRIVING");
+  const [travelInfo, setTravelInfo] = useState<{ duration: string; distance: string } | null>(null);
   
+  // Add a ref to track if we should fit bounds
+  const shouldFitBoundsRef = useRef(false);
+
   // Function to get current position
   const getCurrentPosition = () => {
     if (!navigator.geolocation) {
@@ -307,6 +313,20 @@ const SearchPage = () => {
   const allMarkers = useMemo(() => {
     const markers = [...mapMarkers];
     
+    // Add marker for selected place if not already in searchResults
+    if (selectedPOI && !searchResults.some(p => p.id === selectedPOI.id)) {
+      markers.push({
+        id: selectedPOI.id,
+        position: { lat: selectedPOI.latitude, lng: selectedPOI.longitude },
+        title: selectedPOI.name,
+        popup: selectedPOI.name,
+        markerType: 'attraction',
+        customIcon: false, // default map-pin
+        directionsUrl: ''
+      });
+    }
+    
+    // Add user location marker as blue dot
     if (currentPosition) {
       markers.push({
         id: 'user-location',
@@ -315,12 +335,13 @@ const SearchPage = () => {
         popup: 'You are here',
         markerType: 'user',
         customIcon: true,
+        color: 'blue',
         directionsUrl: ''
       });
     }
     
     return markers;
-  }, [mapMarkers, currentPosition]);
+  }, [mapMarkers, selectedPOI, searchResults, currentPosition]);
   
   // Fetch directions using Google Maps JS API
   const fetchDirections = async (
@@ -469,7 +490,11 @@ const SearchPage = () => {
       toast({ title: "Map not ready yet" });
       return;
     }
-    const poi = searchResults.find(p => p.latitude === marker.position.lat && p.longitude === marker.position.lng);
+    // Find POI in searchResults or selectedPOI
+    let poi = searchResults.find(p => p.latitude === marker.position.lat && p.longitude === marker.position.lng);
+    if (!poi && selectedPOI && selectedPOI.latitude === marker.position.lat && selectedPOI.longitude === marker.position.lng) {
+      poi = selectedPOI;
+    }
     if (!poi) return;
     setSelectedPOI(poi);
     setPlaceDetails(null);
@@ -583,6 +608,65 @@ const SearchPage = () => {
     );
   };
   
+  // Add travel modes
+  const TRAVEL_MODES = [
+    { label: "Car", value: "DRIVING" },
+    { label: "Bike", value: "BICYCLING" },
+    { label: "Bus", value: "TRANSIT" },
+    { label: "Walk", value: "WALKING" },
+  ];
+
+  // Fetch directions info for selected mode
+  const fetchTravelInfo = async (from: { lat: number, lng: number }, to: { lat: number, lng: number }, mode: string) => {
+    return new Promise<{ duration: string; distance: string } | null>((resolve) => {
+      if (!window.google) return resolve(null);
+      const directionsService = new window.google.maps.DirectionsService();
+      directionsService.route(
+        {
+          origin: from,
+          destination: to,
+          travelMode: window.google.maps.TravelMode[mode],
+        },
+        (result: any, status: string) => {
+          if (status !== window.google.maps.DirectionsStatus.OK) {
+            resolve(null);
+            return;
+          }
+          const leg = result.routes[0].legs[0];
+          resolve({ duration: leg.duration.text, distance: leg.distance.text });
+        }
+      );
+    });
+  };
+
+  // When selectedPOI or travel mode changes, fetch travel info
+  useEffect(() => {
+    if (showDirections && selectedPOI && currentPosition) {
+      fetchTravelInfo(currentPosition, { lat: selectedPOI.latitude, lng: selectedPOI.longitude }, selectedTravelMode)
+        .then(setTravelInfo);
+    } else {
+      setTravelInfo(null);
+    }
+  }, [showDirections, selectedPOI, currentPosition, selectedTravelMode]);
+  
+  // When directions are shown or routePolyline changes, fit map to bounds
+  useEffect(() => {
+    if (showDirections && mapInstance && routePolyline && routePolyline.length > 1) {
+      const bounds = new window.google.maps.LatLngBounds();
+      routePolyline.forEach(point => bounds.extend(point));
+      if (currentPosition) bounds.extend(currentPosition);
+      if (selectedPOI) bounds.extend({ lat: selectedPOI.latitude, lng: selectedPOI.longitude });
+      mapInstance.fitBounds(bounds);
+      shouldFitBoundsRef.current = false;
+    }
+  }, [showDirections, mapInstance, routePolyline, currentPosition, selectedPOI]);
+
+  // When user clicks Directions, set flag to fit bounds
+  const handleShowDirections = () => {
+    setShowDirections((v) => !v);
+    shouldFitBoundsRef.current = true;
+  };
+
   return (
     <div className="flex flex-col h-screen">
       <div className="p-4 space-y-4">
@@ -642,9 +726,11 @@ const SearchPage = () => {
           zoom={currentPosition ? 16 : 12}
           markers={allMarkers}
           className="w-full h-full"
-          routePolyline={routePolyline}
+          routePolyline={showDirections && routePolyline.length > 0 ? routePolyline : undefined}
           onMarkerClick={handleMarkerClick}
           onMapLoad={setMapInstance}
+          showUserLocation={true}
+          userLocationOptions={{ color: '#1976D2' }}
         />
         
         {/* Location refresh button */}
@@ -666,11 +752,29 @@ const SearchPage = () => {
         
         {/* Directions & Place Info Panel */}
         {selectedPOI && (placeDetails || directionsSteps.length > 0) && (
-          <div className="fixed left-0 right-0 bottom-0 z-30 bg-white shadow-2xl rounded-t-2xl p-4 max-h-[60vh] overflow-y-auto border-t border-gray-200 animate-slide-up">
+          <div className="fixed left-0 right-0 bottom-[64px] z-30 bg-white shadow-2xl rounded-t-2xl p-4 max-h-[60vh] overflow-y-auto border-t border-gray-200 animate-slide-up">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                {placeDetails?.photoUrl && (
-                  <img src={placeDetails.photoUrl} alt={placeDetails.name} className="w-16 h-16 rounded object-cover border" />
+                {/* Photos row */}
+                {placeDetails?.photos && placeDetails.photos.length > 0 && (
+                  <div className="flex gap-2 overflow-x-auto max-w-xs">
+                    {placeDetails.photos.slice(0, 5).map((photo: any, idx: number) => {
+                      let url = '';
+                      if (photo.photo_reference) {
+                        url = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=120&photoreference=${photo.photo_reference}&key=AIzaSyDP_WWujZfWVS5zVnThVnZP7cFLCicWuwI`;
+                      } else if (typeof photo === 'string') {
+                        url = photo;
+                      }
+                      return (
+                        <img
+                          key={idx}
+                          src={url}
+                          alt={placeDetails.name}
+                          className="w-20 h-20 object-cover rounded border"
+                        />
+                      );
+                    })}
+                  </div>
                 )}
                 <div>
                   <div className="font-bold text-lg flex items-center gap-2">
@@ -693,7 +797,7 @@ const SearchPage = () => {
                   )}
                 </div>
               </div>
-              <button onClick={() => { setSelectedPOI(null); setPlaceDetails(null); setDirectionsSteps([]); setRoutePolyline([]); stopLiveNavigation(); }} className="p-2 rounded-full hover:bg-gray-100">
+              <button onClick={() => { setSelectedPOI(null); setPlaceDetails(null); setDirectionsSteps([]); setRoutePolyline([]); stopLiveNavigation(); setShowDirections(false); }} className="p-2 rounded-full hover:bg-gray-100">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -712,8 +816,35 @@ const SearchPage = () => {
                 <span className="text-xs text-gray-500 ml-2">{placeDetails.phoneNumber}</span>
               )}
             </div>
+            {/* Directions Button and Travel Modes */}
+            <div className="mb-2">
+              <button
+                className="bg-blue-600 text-white px-4 py-2 rounded mr-2"
+                onClick={handleShowDirections}
+              >
+                {showDirections ? "Hide Directions" : "Directions"}
+              </button>
+              {showDirections && (
+                <div className="flex gap-2 mt-2">
+                  {TRAVEL_MODES.map((mode) => (
+                    <button
+                      key={mode.value}
+                      className={`px-3 py-1 rounded border ${selectedTravelMode === mode.value ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'}`}
+                      onClick={() => setSelectedTravelMode(mode.value)}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {showDirections && travelInfo && (
+                <div className="mt-2 text-sm text-gray-700">
+                  <span className="font-semibold">{TRAVEL_MODES.find(m => m.value === selectedTravelMode)?.label}:</span> {travelInfo.distance} ({travelInfo.duration})
+                </div>
+              )}
+            </div>
             {/* Directions Steps */}
-            {directionsSteps.length > 0 && (
+            {showDirections && directionsSteps.length > 0 && (
               <div className="mt-2">
                 <div className="font-semibold mb-1 flex items-center gap-2"><Clock className="w-4 h-4" />Directions</div>
                 <ol className="space-y-2 pl-4">
@@ -725,6 +856,24 @@ const SearchPage = () => {
                     </li>
                   ))}
                 </ol>
+              </div>
+            )}
+            {/* Reviews */}
+            {placeDetails?.reviews && placeDetails.reviews.length > 0 && (
+              <div className="mt-4">
+                <div className="font-semibold mb-2">Reviews</div>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {placeDetails.reviews.slice(0, 5).map((review: any, idx: number) => (
+                    <div key={idx} className="border-b pb-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <img src={review.profile_photo_url} alt={review.author_name} className="w-6 h-6 rounded-full" />
+                        <span className="font-medium text-sm">{review.author_name}</span>
+                        <span className="text-xs text-gray-400">{review.relative_time_description}</span>
+                      </div>
+                      <div className="text-xs text-gray-700">{review.text}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

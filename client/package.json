@@ -9,5 +9,8 @@
   },
   "dependencies": {
     "wouter": "^3.7.0"
+  },
+  "devDependencies": {
+    "vite": "^7.0.0"
   }
 }

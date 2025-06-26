@@ -42,6 +42,7 @@ interface POI {
   isOpen?: boolean;
 }
 
+// Define interface for PlaceDetails
 interface PlaceDetails {
   name: string;
   address: string;
@@ -53,6 +54,7 @@ interface PlaceDetails {
   phoneNumber?: string;
   website?: string;
   reviews?: any[];
+  photos?: any[];
 }
 
 const topCategories = [
@@ -138,7 +140,7 @@ const SearchPage = () => {
   
   // Add a ref to track if we should fit bounds
   const shouldFitBoundsRef = useRef(false);
-
+  
   // Function to get current position
   const getCurrentPosition = () => {
     if (!navigator.geolocation) {
@@ -335,7 +337,6 @@ const SearchPage = () => {
         popup: 'You are here',
         markerType: 'user',
         customIcon: true,
-        color: 'blue',
         directionsUrl: ''
       });
     }
@@ -445,6 +446,7 @@ const SearchPage = () => {
             phoneNumber: result.formatted_phone_number,
             website: result.website,
             reviews: result.reviews,
+            photos: result.photos,
           });
         }
       );
@@ -599,6 +601,7 @@ const SearchPage = () => {
             phoneNumber: result.formatted_phone_number,
             website: result.website,
             reviews: result.reviews,
+            photos: result.photos,
           });
           setDirectionsSteps([]);
           setRoutePolyline([]);
@@ -661,12 +664,54 @@ const SearchPage = () => {
     }
   }, [showDirections, mapInstance, routePolyline, currentPosition, selectedPOI]);
 
+  // NEW: Fit bounds to user and selected place even if not showing directions
+  useEffect(() => {
+    if (
+      mapInstance &&
+      selectedPOI &&
+      currentPosition &&
+      !showDirections
+    ) {
+      // Defensive: Check for valid coordinates
+      const isValid = (pt: any) =>
+        pt &&
+        typeof pt.lat === 'number' &&
+        !isNaN(pt.lat) &&
+        typeof pt.lng === 'number' &&
+        !isNaN(pt.lng);
+
+      const dest = { lat: selectedPOI.latitude, lng: selectedPOI.longitude };
+      if (!isValid(currentPosition) || !isValid(dest)) {
+        return;
+      }
+
+      const bounds = new window.google.maps.LatLngBounds();
+      bounds.extend(currentPosition);
+      bounds.extend(dest);
+      mapInstance.fitBounds(bounds);
+    }
+  }, [selectedPOI, currentPosition, mapInstance, showDirections]);
+
   // When user clicks Directions, set flag to fit bounds
   const handleShowDirections = () => {
     setShowDirections((v) => !v);
     shouldFitBoundsRef.current = true;
   };
-
+  
+  // Place Details UI Kit integration
+  useEffect(() => {
+    if (!window.google || !window.google.maps || !window.google.maps.places || !selectedPOI) return;
+    const container = document.getElementById('place-details-ui');
+    if (container) container.innerHTML = '';
+    // @ts-ignore
+    const widget = new window.google.maps.places.PlaceDetailsWidget({
+      placeId: selectedPOI.id,
+      language: 'en',
+    });
+    // @ts-ignore
+    widget.render(document.getElementById('place-details-ui'));
+  }, [selectedPOI]);
+  
   return (
     <div className="flex flex-col h-screen">
       <div className="p-4 space-y-4">
@@ -729,8 +774,7 @@ const SearchPage = () => {
           routePolyline={showDirections && routePolyline.length > 0 ? routePolyline : undefined}
           onMarkerClick={handleMarkerClick}
           onMapLoad={setMapInstance}
-          showUserLocation={true}
-          userLocationOptions={{ color: '#1976D2' }}
+
         />
         
         {/* Location refresh button */}
@@ -755,27 +799,6 @@ const SearchPage = () => {
           <div className="fixed left-0 right-0 bottom-[64px] z-30 bg-white shadow-2xl rounded-t-2xl p-4 max-h-[60vh] overflow-y-auto border-t border-gray-200 animate-slide-up">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                {/* Photos row */}
-                {placeDetails?.photos && placeDetails.photos.length > 0 && (
-                  <div className="flex gap-2 overflow-x-auto max-w-xs">
-                    {placeDetails.photos.slice(0, 5).map((photo: any, idx: number) => {
-                      let url = '';
-                      if (photo.photo_reference) {
-                        url = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=120&photoreference=${photo.photo_reference}&key=AIzaSyDP_WWujZfWVS5zVnThVnZP7cFLCicWuwI`;
-                      } else if (typeof photo === 'string') {
-                        url = photo;
-                      }
-                      return (
-                        <img
-                          key={idx}
-                          src={url}
-                          alt={placeDetails.name}
-                          className="w-20 h-20 object-cover rounded border"
-                        />
-                      );
-                    })}
-                  </div>
-                )}
                 <div>
                   <div className="font-bold text-lg flex items-center gap-2">
                     {placeDetails?.name || selectedPOI.name}
@@ -802,19 +825,8 @@ const SearchPage = () => {
               </button>
             </div>
             <div className="flex items-center gap-2 mb-2">
-              {placeDetails?.url && (
-                <a href={placeDetails.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 flex items-center gap-1 text-xs hover:underline">
-                  <ExternalLink className="w-4 h-4" /> Google Maps
-                </a>
-              )}
-              {placeDetails?.website && (
-                <a href={placeDetails.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 flex items-center gap-1 text-xs hover:underline">
-                  <ExternalLink className="w-4 h-4" /> Website
-                </a>
-              )}
-              {placeDetails?.phoneNumber && (
-                <span className="text-xs text-gray-500 ml-2">{placeDetails.phoneNumber}</span>
-              )}
+              {/* Place Details UI Kit will render here */}
+              <div id="place-details-ui" style={{ width: '100%', minHeight: 300 }} />
             </div>
             {/* Directions Button and Travel Modes */}
             <div className="mb-2">

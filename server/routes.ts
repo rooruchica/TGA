@@ -1451,19 +1451,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Chat endpoint
   app.post('/api/chat', async (req, res) => {
     try {
-      const { message } = req.body;
-      
+      const { messages } = req.body;
+      const systemPrompt = {
+        role: 'system',
+        content: `You are a helpful and knowledgeable Maharashtra tour guide assistant. Answer questions about Maharashtra tourism, places, travel, or culture. If the question is off-topic, politely refuse. Be specific and helpful.`
+      };
+      const chatMessages = [
+        systemPrompt,
+        ...(Array.isArray(messages) ? messages : [{ role: 'user', content: String(messages) }])
+      ];
+      console.log('Sending to Mistral:', JSON.stringify(chatMessages, null, 2)); // Debug log
       const chatResponse = await mistral.chat.complete({
         model: 'mistral-large-latest',
-        messages: [{
-          role: 'system',
-          content: `You are a knowledgeable Maharashtra tour guide assistant. Only answer questions about Maharashtra tourism, places, travel, or culture. If the question is off-topic, politely refuse. Always answer in 2-3 sentences, be specific, and avoid generalities or long explanations. Be concise.`
-        }, {
-          role: 'user',
-          content: typeof message === "string" ? message : String(message)
-        }],
-        maxTokens: 120 // Limit response length for short answers
+        messages: chatMessages,
+        maxTokens: 180 // Slightly longer for richer answers
       });
+      console.log('Mistral response:', chatResponse); // Debug log
 
       if (
         chatResponse &&
@@ -1472,7 +1475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         chatResponse.choices[0].message &&
         typeof chatResponse.choices[0].message.content === "string"
       ) {
-      res.json({ response: chatResponse.choices[0].message.content });
+        res.json({ response: chatResponse.choices[0].message.content });
       } else {
         res.status(500).json({ error: 'No response from assistant' });
       }
@@ -2290,6 +2293,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(itinerary);
     } catch (error) {
       return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Add a test endpoint for Mistral API connectivity
+  app.get('/api/test-mistral', async (req, res) => {
+    try {
+      const response = await mistral.chat.complete({
+        model: 'mistral-large-latest',
+        messages: [
+          { role: 'system', content: 'You are a helpful assistant.' },
+          { role: 'user', content: 'What is the capital of Maharashtra?' }
+        ]
+      });
+      res.json(response);
+    } catch (error) {
+      res.status(500).json({ error: String(error) });
     }
   });
 

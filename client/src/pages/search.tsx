@@ -15,6 +15,15 @@ declare global {
   }
 }
 
+// Add TypeScript declaration for custom element to silence JSX error
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'gmpx-place-details': any;
+    }
+  }
+}
+
 // Define categories
 const POI_CATEGORIES = {
   MEDICAL: "medical",
@@ -81,7 +90,7 @@ const fetchNearbyPlaces = async (
   radius: number = 1000
 ): Promise<POI[]> => {
   return new Promise((resolve, reject) => {
-    if (!window.google || !map) return reject("Google Maps not loaded");
+    if (!window.google || !map || !(map instanceof window.google.maps.Map)) return reject("Google Maps not loaded or map is not a valid Map instance");
     let type = "point_of_interest";
     if (category === POI_CATEGORIES.RESTAURANT) type = "restaurant";
     else if (category === POI_CATEGORIES.CAFE) type = "cafe";
@@ -407,7 +416,7 @@ const SearchPage = () => {
     placeId: string
   ): Promise<PlaceDetails | null> => {
     return new Promise((resolve, reject) => {
-      if (!window.google || !map) return reject("Google Maps not loaded");
+      if (!window.google || !map || !(map instanceof window.google.maps.Map)) return reject("Google Maps not loaded or map is not a valid Map instance");
       const service = new window.google.maps.places.PlacesService(map);
       service.getDetails(
         {
@@ -547,7 +556,7 @@ const SearchPage = () => {
   const handleSuggestionClick = async (placeId: string) => {
     setAutocompleteResults([]);
     setSearchQuery("");
-    if (!window.google || !mapInstance) return;
+    if (!window.google || !mapInstance || !(mapInstance instanceof window.google.maps.Map)) return;
     const service = new window.google.maps.places.PlacesService(mapInstance);
     service.getDetails(
       {
@@ -566,7 +575,7 @@ const SearchPage = () => {
           "reviews",
         ],
       },
-      (result: any, status: string) => {
+      async (result: any, status: string) => {
         if (status === window.google.maps.places.PlacesServiceStatus.OK) {
           // Center map
           if (result.geometry && result.geometry.location) {
@@ -603,8 +612,19 @@ const SearchPage = () => {
             reviews: result.reviews,
             photos: result.photos,
           });
-          setDirectionsSteps([]);
-          setRoutePolyline([]);
+          // Fetch and show directions for searched location
+          if (currentPosition && result.geometry && result.geometry.location) {
+            const { polyline, steps } = await fetchDirections(
+              mapInstance,
+              currentPosition,
+              { lat: result.geometry.location.lat(), lng: result.geometry.location.lng() }
+            );
+            setRoutePolyline(polyline);
+            setDirectionsSteps(steps);
+          } else {
+            setRoutePolyline([]);
+            setDirectionsSteps([]);
+          }
           stopLiveNavigation();
         }
       }
@@ -692,26 +712,13 @@ const SearchPage = () => {
     }
   }, [selectedPOI, currentPosition, mapInstance, showDirections]);
 
-  // When user clicks Directions, set flag to fit bounds
-  const handleShowDirections = () => {
-    setShowDirections((v) => !v);
-    shouldFitBoundsRef.current = true;
-  };
-  
-  // Place Details UI Kit integration
+  // When a place is selected (POI or search result), always show directions
   useEffect(() => {
-    if (!window.google || !window.google.maps || !window.google.maps.places || !selectedPOI) return;
-    const container = document.getElementById('place-details-ui');
-    if (container) container.innerHTML = '';
-    // @ts-ignore
-    const widget = new window.google.maps.places.PlaceDetailsWidget({
-      placeId: selectedPOI.id,
-      language: 'en',
-    });
-    // @ts-ignore
-    widget.render(document.getElementById('place-details-ui'));
+    if (selectedPOI) {
+      setShowDirections(true);
+    }
   }, [selectedPOI]);
-  
+
   return (
     <div className="flex flex-col h-screen">
       <div className="p-4 space-y-4">
@@ -795,99 +802,9 @@ const SearchPage = () => {
         )}
         
         {/* Directions & Place Info Panel */}
-        {selectedPOI && (placeDetails || directionsSteps.length > 0) && (
-          <div className="fixed left-0 right-0 bottom-[64px] z-30 bg-white shadow-2xl rounded-t-2xl p-4 max-h-[60vh] overflow-y-auto border-t border-gray-200 animate-slide-up">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div>
-                  <div className="font-bold text-lg flex items-center gap-2">
-                    {placeDetails?.name || selectedPOI.name}
-                    {placeDetails?.rating && (
-                      <span className="flex items-center text-yellow-500 text-sm ml-2"><Star className="w-4 h-4 mr-1" />{placeDetails.rating}</span>
-                    )}
-                  </div>
-                  <div className="text-xs text-gray-600 flex items-center gap-1">
-                    <MapIcon className="w-4 h-4" />
-                    {placeDetails?.address || selectedPOI.address}
-                  </div>
-                  {placeDetails?.isOpen !== undefined && (
-                    <div className={placeDetails.isOpen ? "text-green-600 text-xs" : "text-red-600 text-xs"}>
-                      {placeDetails.isOpen ? "Open now" : "Closed"}
-                    </div>
-                  )}
-                  {placeDetails?.types && (
-                    <div className="text-xs text-gray-400 mt-1">{placeDetails.types.slice(0, 3).join(", ")}</div>
-                  )}
-                </div>
-              </div>
-              <button onClick={() => { setSelectedPOI(null); setPlaceDetails(null); setDirectionsSteps([]); setRoutePolyline([]); stopLiveNavigation(); setShowDirections(false); }} className="p-2 rounded-full hover:bg-gray-100">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="flex items-center gap-2 mb-2">
-              {/* Place Details UI Kit will render here */}
-              <div id="place-details-ui" style={{ width: '100%', minHeight: 300 }} />
-            </div>
-            {/* Directions Button and Travel Modes */}
-            <div className="mb-2">
-              <button
-                className="bg-blue-600 text-white px-4 py-2 rounded mr-2"
-                onClick={handleShowDirections}
-              >
-                {showDirections ? "Hide Directions" : "Directions"}
-              </button>
-              {showDirections && (
-                <div className="flex gap-2 mt-2">
-                  {TRAVEL_MODES.map((mode) => (
-                    <button
-                      key={mode.value}
-                      className={`px-3 py-1 rounded border ${selectedTravelMode === mode.value ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'}`}
-                      onClick={() => setSelectedTravelMode(mode.value)}
-                    >
-                      {mode.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {showDirections && travelInfo && (
-                <div className="mt-2 text-sm text-gray-700">
-                  <span className="font-semibold">{TRAVEL_MODES.find(m => m.value === selectedTravelMode)?.label}:</span> {travelInfo.distance} ({travelInfo.duration})
-                </div>
-              )}
-            </div>
-            {/* Directions Steps */}
-            {showDirections && directionsSteps.length > 0 && (
-              <div className="mt-2">
-                <div className="font-semibold mb-1 flex items-center gap-2"><Clock className="w-4 h-4" />Directions</div>
-                <ol className="space-y-2 pl-4">
-                  {directionsSteps.map((step, idx) => (
-                    <li key={idx} className="text-sm text-gray-700 flex gap-2 items-start">
-                      <span className="font-bold text-blue-600">{idx + 1}.</span>
-                      <span dangerouslySetInnerHTML={{ __html: step.html_instructions }} />
-                      <span className="text-xs text-gray-400 ml-2">{step.distance?.text} ({step.duration?.text})</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            )}
-            {/* Reviews */}
-            {placeDetails?.reviews && placeDetails.reviews.length > 0 && (
-              <div className="mt-4">
-                <div className="font-semibold mb-2">Reviews</div>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {placeDetails.reviews.slice(0, 5).map((review: any, idx: number) => (
-                    <div key={idx} className="border-b pb-2">
-                      <div className="flex items-center gap-2 mb-1">
-                        <img src={review.profile_photo_url} alt={review.author_name} className="w-6 h-6 rounded-full" />
-                        <span className="font-medium text-sm">{review.author_name}</span>
-                        <span className="text-xs text-gray-400">{review.relative_time_description}</span>
-                      </div>
-                      <div className="text-xs text-gray-700">{review.text}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+        {selectedPOI && (
+          <div id="place-details-ui" style={{ width: '100%', minHeight: 300 }}>
+            <gmpx-place-details place-id={selectedPOI.id} language="en"></gmpx-place-details>
           </div>
         )}
       </div>
@@ -908,6 +825,36 @@ const SearchPage = () => {
         </div>
       </Card>
       <BottomNavigation />
+
+      {placeDetails && (
+        <div className="place-details-panel" style={{ background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', padding: 16, margin: 16 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 600 }}>{placeDetails.name}</h2>
+          <p style={{ margin: '8px 0' }}>{placeDetails.address}</p>
+          {placeDetails.rating && <p>Rating: {placeDetails.rating} ⭐</p>}
+          {placeDetails.isOpen !== undefined && (
+            <p>Status: <span style={{ color: placeDetails.isOpen ? 'green' : 'red' }}>{placeDetails.isOpen ? 'Open now' : 'Closed'}</span></p>
+          )}
+          {placeDetails.website && (
+            <p><a href={placeDetails.website} target="_blank" rel="noopener noreferrer">Website</a></p>
+          )}
+          {placeDetails.phoneNumber && <p>Phone: {placeDetails.phoneNumber}</p>}
+          {placeDetails.photoUrl && (
+            <img src={placeDetails.photoUrl} alt="Place" style={{ width: '100%', maxWidth: 400, borderRadius: 8, margin: '12px 0' }} />
+          )}
+          {placeDetails.reviews && placeDetails.reviews.length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 500 }}>Reviews:</h3>
+              <ul style={{ paddingLeft: 16 }}>
+                {placeDetails.reviews.slice(0, 3).map((review: any, idx: number) => (
+                  <li key={idx} style={{ marginBottom: 8 }}>
+                    <strong>{review.author_name}</strong>: {review.text}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

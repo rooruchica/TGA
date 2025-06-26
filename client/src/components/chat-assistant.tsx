@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -18,6 +18,11 @@ export function ChatAssistant() {
     { role: string; content: string }[]
   >([]);
   const { toast } = useToast();
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [conversation, isLoading]);
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;
@@ -36,16 +41,26 @@ export function ChatAssistant() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage }),
+        body: JSON.stringify({ messages: [...conversation, { role: "user", content: userMessage }] }),
       });
 
       if (!response.ok) throw new Error("Failed to get response");
 
       const data = await response.json();
-      setConversation((prev) => [
-        ...prev,
-        { role: "assistant", content: data.response },
-      ]);
+      setConversation((prev) => {
+        // Prevent repeated bot responses
+        if (
+          prev.length > 0 &&
+          prev[prev.length - 1].role === "assistant" &&
+          prev[prev.length - 1].content.trim() === data.response.trim()
+        ) {
+          return prev;
+        }
+        return [
+          ...prev,
+          { role: "assistant", content: data.response },
+        ];
+      });
     } catch (error) {
       toast({
         title: "Error",
@@ -72,19 +87,44 @@ export function ChatAssistant() {
         <SheetHeader>
           <SheetTitle>Maharashtra Tour Guide Assistant</SheetTitle>
         </SheetHeader>
-        <div className="flex-1 overflow-auto py-4 space-y-4">
+        <div className="flex-1 overflow-auto py-4 space-y-4 bg-gray-50 rounded-lg">
           {conversation.map((msg, i) => (
             <div
               key={i}
-              className={`p-3 rounded-lg ${
-                msg.role === "user"
-                  ? "bg-primary text-primary-foreground ml-8"
-                  : "bg-muted mr-8"
-              }`}
+              className={`flex items-end ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              {msg.content}
+              {msg.role === "assistant" && (
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-2">
+                  <span role="img" aria-label="bot">🤖</span>
+                </div>
+              )}
+              <div
+                className={`p-3 rounded-2xl max-w-[75%] shadow-sm text-sm whitespace-pre-line ${
+                  msg.role === "user"
+                    ? "bg-primary text-primary-foreground ml-8"
+                    : "bg-white mr-8 border border-gray-200"
+                }`}
+              >
+                {msg.content}
+              </div>
+              {msg.role === "user" && (
+                <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center ml-2">
+                  <span role="img" aria-label="user">🧑</span>
+                </div>
+              )}
             </div>
           ))}
+          {isLoading && (
+            <div className="flex items-end justify-start">
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-2">
+                <span role="img" aria-label="bot">🤖</span>
+              </div>
+              <div className="p-3 rounded-2xl max-w-[75%] shadow-sm text-sm bg-white border border-gray-200 animate-pulse">
+                ...
+              </div>
+            </div>
+          )}
+          <div ref={chatEndRef} />
         </div>
         <div className="flex gap-2 pt-4">
           <Textarea
